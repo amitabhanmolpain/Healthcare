@@ -1,0 +1,174 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --black-gradient: linear-gradient(
+    135deg,
+    #fbfbfb 0%, /* Very light cyan-blue, evokes cleanliness and trust */
+    #601fa1 50%, /* Light gray (Tailwind bg-gray-100), keeps it neutral */
+    #4f148f 100% /* Soft sky blue, adds a subtle calming tone */
+  );
+  --card-shadow: 0px 20px 100px -10px rgba(66, 71, 91, 0.1);
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
+.text-gradient {
+  background: radial-gradient(
+    64.18% 64.18% at 71.16% 35.69%,
+    #ddeced 0.89%,
+    #4ed359 17.23%,
+    rgba(149, 255, 104, 0.867) 42.04%,
+    #4ed359 55.12%,
+    #6aa86f 71.54%,
+    #4ed359 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.bg-green-gradient {
+  background: linear-gradient(
+    157.81deg,
+    #e1fade -43.27%,
+    #caf5be -21.24%,
+    #a9f09d 12.19%,
+    #7feb7d 29.82%,
+    #5ce661 51.94%,
+    #33cf62 90.29%
+  );
+}
+
+.bg-black-gradient {
+  background: var(--black-gradient);
+}
+.bg-black-gradient-2 {
+  background: linear-gradient(
+    -168.39deg,
+    #fbfbfb 0%, /* Very light cyan-blue, evokes cleanliness and trust */
+    #601fa1 50%, /* Light gray (Tailwind bg-gray-100), keeps it neutral */
+    #4f148f 100%
+  );
+}
+
+.bg-gray-gradient {
+  background: linear-gradient(
+    153.47deg,
+    rgba(255, 255, 255, 0) -341.94%,
+    #f5f5f5 95.11% /* Light gray */
+  );
+}
+
+.bg-discount-gradient {
+  background: linear-gradient(125.17deg, #00fd08 0%, #065a33 100%);
+}
+
+.box-shadow {
+  box-shadow: 0px 20px 100px -10px rgba(66, 71, 91, 0.1);
+}
+
+.sidebar {
+  -webkit-animation: slide-top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: slide-top 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@-webkit-keyframes slide-top {
+  0% {
+    -webkit-transform: translateY(100px);
+    transform: translateY(100px);
+  }
+  100% {
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-top {
+  0% {
+    -webkit-transform: translateY(100px);
+    transform: translateY(100px);
+  }
+  100% {
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+  }
+}
+
+.feature-card:hover {
+  background: var(--black-gradient);
+  box-shadow: var(--card-shadow);
+}
+
+.feedback-container .feedback-card:last-child {
+  margin-right: 0px;
+}
+
+.feedback-card {
+  background: transparent;
+}
+
+.feedback-card:hover {
+  background: var(--black-gradient);
+}
+
+.green__gradient {
+  background: linear-gradient(
+    180deg,
+    rgba(212, 244, 226, 0) 0%, /* Very light mint green, fading from transparent */
+    #a8d5ba 100% /* Soft sage green, calming and natural */
+  );
+  filter: blur(123px);
+}
+
+.pink__gradient {
+  background: linear-gradient(90deg, #e10c0c 0%, #920303 100%);
+  filter: blur(900px);
+}
+
+.white__gradient {
+  background: rgb(98, 235, 24);
+  filter: blur(550px);
+}
+
+/* Clients Slider Animation */
+.clients-slider {
+  display: flex;
+  width: max-content; /* Ensures the slider track takes up only the content width */
+}
+
+.animate-slide {
+  animation: slide 15s linear infinite; /* Reduced from 20s to 15s for faster cycling */
+}
+
+/* Optional: Pause animation on hover */
+.clients-slider:hover {
+  animation-play-state: paused;
+}
+
+@keyframes slide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Ensure the container hides overflow */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Spacing between images */
+.clients-slider .flex-1 {
+  margin: 0 16px; /* Matches mx-4 */
+}
+
+
