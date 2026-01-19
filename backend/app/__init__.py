@@ -2,11 +2,13 @@ from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from mongoengine import connect
 from app.config import Config
 
 bcrypt = Bcrypt()
 jwt = JWTManager()
+socketio = SocketIO()
 
 def create_app():
     app = Flask(__name__)
@@ -15,6 +17,11 @@ def create_app():
     # Initialize extensions
     bcrypt.init_app(app)
     jwt.init_app(app)
+    
+    # Initialize SocketIO with CORS
+    socketio.init_app(app, 
+                     cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+                     async_mode='threading')
     
     # Configure CORS - Allow frontend origin
     CORS(app, 

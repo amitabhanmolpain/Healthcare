@@ -61,7 +61,8 @@ const AppointmentBooking = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await doctorAPI.getAllDoctors();
+      // Fetch ALL doctors including inactive ones for appointment booking
+      const response = await doctorAPI.getAllDoctorsIncludingInactive();
       // Map backend doctor images to frontend imports
       const doctorsWithImages = (response.doctors || []).map(doctor => ({
         ...doctor,
@@ -364,6 +365,16 @@ const AppointmentBooking = () => {
                   onClick={() => setShowDoctorDetail(doctor)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-purple-900/90 via-purple-900/40 to-transparent"></div>
+                
+                {/* Availability Badge */}
+                <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg ${
+                  doctor.is_active 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-red-500 text-white'
+                }`}>
+                  {doctor.is_active ? '● Available' : '● Offline'}
+                </div>
+
                 {selectedDoctor?.id === doctor.id && (
                   <div className="absolute top-3 right-3 w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
                     <CheckCircle size={24} className="text-white" />

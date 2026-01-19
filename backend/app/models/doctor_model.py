@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, IntField, FloatField, ListField, DictField
+from mongoengine import Document, StringField, IntField, FloatField, ListField, DictField, BooleanField
 from datetime import datetime
 
 class Doctor(Document):
@@ -12,6 +12,7 @@ class Doctor(Document):
     availability = ListField(StringField(), default=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
     qualifications = ListField(StringField(), default=[])
     about = StringField(default="")
+    is_active = BooleanField(default=True)  # Doctor availability status
     
     meta = {
         'collection': 'doctors'

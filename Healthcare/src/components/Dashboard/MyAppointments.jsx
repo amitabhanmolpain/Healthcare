@@ -38,6 +38,18 @@ const MyAppointments = () => {
 
   useEffect(() => {
     fetchAppointments();
+
+    // Listen for WebSocket appointment updates
+    const handleAppointmentUpdate = (event) => {
+      console.log('MyAppointments received update event:', event.detail);
+      fetchAppointments(); // Refresh appointments list
+    };
+
+    window.addEventListener('appointment_updated', handleAppointmentUpdate);
+
+    return () => {
+      window.removeEventListener('appointment_updated', handleAppointmentUpdate);
+    };
   }, []);
 
   const fetchAppointments = async () => {

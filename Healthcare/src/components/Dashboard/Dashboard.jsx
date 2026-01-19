@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import socketService from '../../services/socket';
 import styles from "../../style";
 import DashboardSidebar from "./DashboardSidebar";
 import DashboardHome from "./DashboardHome";
@@ -12,6 +14,43 @@ import ProfileSection from "./ProfileSection";
 const Dashboard = ({ user, onLogout, onBackToHome }) => {
   const [activeSection, setActiveSection] = useState("home");
   const [showGame, setShowGame] = useState(false);
+
+  // Connect to WebSocket for real-time updates
+  useEffect(() => {
+    socketService.connect();
+    console.log('User Dashboard connected to WebSocket');
+
+    // Listen for appointment updates
+    socketService.on('appointment_updated', (data) => {
+      console.log('🔔 User received appointment update:', data);
+      toast.success(`Your appointment status: ${data.status}`, {
+        icon: '📅',
+        duration: 4000
+      });
+      
+      // Trigger refresh of MyAppointments if it's mounted
+      window.dispatchEvent(new CustomEvent('appointment_updated', { detail: data }));
+    });
+
+    // Listen for doctor status updates
+    socketService.on('doctor_status_updated', (data) => {
+      console.log('🔔 User received doctor status update:', data);
+      if (!data.is_active) {
+        toast(`Dr. ${data.name} is now offline`, {
+          icon: '👨‍⚕️',
+          duration: 3000
+        });
+      }
+      
+      // Trigger refresh of doctors list if AppointmentBooking is mounted
+      window.dispatchEvent(new CustomEvent('doctor_status_updated', { detail: data }));
+    });
+
+    return () => {
+      socketService.off('appointment_updated');
+      socketService.off('doctor_status_updated');
+    };
+  }, []);
 
   const renderSection = () => {
     switch (activeSection) {

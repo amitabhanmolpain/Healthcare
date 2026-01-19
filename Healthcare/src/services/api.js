@@ -82,6 +82,16 @@ export const doctorAPI = {
     return response.data;
   },
 
+  getAllDoctorsIncludingInactive: async () => {
+    const response = await apiClient.get('/doctors/all');
+    return response.data;
+  },
+
+  getDashboardDoctors: async () => {
+    const response = await apiClient.get('/doctors/dashboard');
+    return response.data;
+  },
+
   getDoctorById: async (doctorId) => {
     const response = await apiClient.get(`/doctors/${doctorId}`);
     return response.data;

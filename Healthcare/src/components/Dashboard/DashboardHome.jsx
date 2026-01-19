@@ -1,4 +1,6 @@
-import { doctors } from "../../constants";
+import { useState, useEffect } from "react";
+import { doctorAPI } from "../../services/api";
+import toast from "react-hot-toast";
 import { 
   Calendar, 
   Pill, 
@@ -11,6 +13,37 @@ import {
 } from "lucide-react";
 
 const DashboardHome = ({ user, setActiveSection }) => {
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardDoctors();
+
+    // Listen for doctor status updates from WebSocket
+    const handleDoctorStatusUpdate = (event) => {
+      console.log('DashboardHome received doctor update:', event.detail);
+      // Refresh doctors list when status changes
+      fetchDashboardDoctors();
+    };
+
+    window.addEventListener('doctor_status_updated', handleDoctorStatusUpdate);
+
+    return () => {
+      window.removeEventListener('doctor_status_updated', handleDoctorStatusUpdate);
+    };
+  }, []);
+
+  const fetchDashboardDoctors = async () => {
+    try {
+      const response = await doctorAPI.getDashboardDoctors();
+      setDoctors(response.doctors || []);
+    } catch (error) {
+      console.error("Error fetching dashboard doctors:", error);
+      toast.error("Failed to load doctors");
+    } finally {
+      setLoadingDoctors(false);
+    }
+  };
   const quickActions = [
     {
       id: 1,
@@ -145,40 +178,53 @@ const DashboardHome = ({ user, setActiveSection }) => {
             <TrendingUp size={18} />
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {doctors.slice(0, 4).map((doctor) => (
-            <div
-              key={doctor.id}
-              className="group bg-white/5 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition-all hover:scale-105 shadow-lg hover:shadow-2xl"
-            >
-              <div className="relative h-56 overflow-hidden bg-gradient-to-br from-purple-600/20 to-blue-600/20">
-                <img
-                  src={doctor.img}
-                  alt={doctor.name}
-                  className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 to-transparent"></div>
-              </div>
-              <div className="p-5">
-                <h3 className="font-poppins font-semibold text-white text-lg mb-1">
-                  {doctor.name}
-                </h3>
-                <p className="text-gray-300 text-sm mb-3">{doctor.specialty}</p>
-                <div className="flex items-center gap-2 text-sm mb-4">
-                  <TrendingUp size={16} className="text-yellow-400" />
-                  <span className="text-white font-medium">4.8</span>
-                  <span className="text-gray-400">(120+ reviews)</span>
+        
+        {loadingDoctors ? (
+          <div className="text-center text-gray-300 py-8">Loading doctors...</div>
+        ) : doctors.length === 0 ? (
+          <div className="text-center text-gray-300 py-8">No doctors available at the moment</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {doctors.map((doctor) => (
+              <div
+                key={doctor.id}
+                className="group bg-white/5 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition-all hover:scale-105 shadow-lg hover:shadow-2xl"
+              >
+                <div className="relative h-56 overflow-hidden bg-gradient-to-br from-purple-600/20 to-blue-600/20">
+                  <img
+                    src={doctor.img}
+                    alt={doctor.name}
+                    className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => { e.target.src = 'https://via.placeholder.com/200'; }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 to-transparent"></div>
+                  
+                  {/* Available Badge */}
+                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold shadow-lg">
+                    ● Available
+                  </div>
                 </div>
-                <button
-                  onClick={() => setActiveSection("appointments")}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-green-500 text-white font-semibold text-sm hover:shadow-lg hover:scale-105 transition-all"
-                >
-                  Book Now
-                </button>
+                <div className="p-5">
+                  <h3 className="font-poppins font-semibold text-white text-lg mb-1">
+                    {doctor.name}
+                  </h3>
+                  <p className="text-gray-300 text-sm mb-3">{doctor.specialty}</p>
+                  <div className="flex items-center gap-2 text-sm mb-4">
+                    <TrendingUp size={16} className="text-yellow-400" />
+                    <span className="text-white font-medium">{doctor.rating || 4.8}</span>
+                    <span className="text-gray-400">(120+ reviews)</span>
+                  </div>
+                  <button
+                    onClick={() => setActiveSection("appointments")}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-green-500 text-white font-semibold text-sm hover:shadow-lg hover:scale-105 transition-all"
+                  >
+                    Book Now
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Health Tips */}
