@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import styles from './style';
 import { About, Doctors, Services, Clients, CTA, Footer, Navbar, Hero, Chatbot, MentalHealthGames } from "./components";
 import { Login } from "./components/Auth";
 import { Dashboard } from "./components/Dashboard";
+import AdminLogin from "./components/Admin/AdminLogin";
+import AdminDashboard from "./components/Admin/AdminDashboard";
 import { authAPI } from './services/api';
 
 const App = () => {
@@ -45,17 +48,33 @@ const App = () => {
     setShowDashboard(false);
   };
 
-  // Show Login page if trying to access dashboard without auth
-  if (showDashboard && !isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
-  }
+  return (
+    <Router>
+      <Routes>
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
-  // Show Dashboard if authenticated and showDashboard is true
-  if (showDashboard && isAuthenticated) {
-    return <Dashboard user={user} onLogout={handleLogout} onBackToHome={handleBackToHome} />;
-  }
+        {/* User Routes */}
+        <Route path="/" element={
+          showDashboard && !isAuthenticated ? (
+            <Login onLogin={handleLogin} />
+          ) : showDashboard && isAuthenticated ? (
+            <Dashboard user={user} onLogout={handleLogout} onBackToHome={handleBackToHome} />
+          ) : (
+            <MainLandingPage 
+              isAuthenticated={isAuthenticated}
+              handleGoToDashboard={handleGoToDashboard}
+            />
+          )
+        } />
+      </Routes>
+    </Router>
+  );
+};
 
-  // Show main landing page
+// Main Landing Page Component
+const MainLandingPage = ({ isAuthenticated, handleGoToDashboard }) => {
   return (
     <div className="bg-purple-700 w-full overflow-hidden">
       <div className={`${styles.paddingX} ${styles.flexCenter}`}>

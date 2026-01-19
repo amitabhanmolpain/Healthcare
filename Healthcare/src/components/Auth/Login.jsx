@@ -302,6 +302,17 @@ const Login = ({ onLogin }) => {
           </p>
         </div>
 
+        {/* Admin Login Link */}
+        <div className="mt-6 text-center">
+          <a 
+            href="/admin/login" 
+            className="text-sm text-dimWhite hover:text-red-500 transition-colors duration-300 flex items-center justify-center gap-2"
+          >
+            <span>🛡️</span>
+            <span>Admin Portal</span>
+          </a>
+        </div>
+
         {/* Features Preview */}
         <div className="mt-8 grid grid-cols-3 gap-4">
           <div className="text-center">

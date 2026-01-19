@@ -80,9 +80,13 @@ def create_appointment(data, user_id):
 def get_user_appointments(user_id, status=None):
     """Get all appointments for a user"""
     try:
+        print(f"Fetching appointments for user_id: {user_id}")
         user = User.objects(id=user_id).first()
         if not user:
+            print(f"User not found with id: {user_id}")
             return {"message": "User not found"}, 404
+        
+        print(f"User found: {user.name}")
         
         # Filter by status if provided
         if status:
@@ -90,12 +94,25 @@ def get_user_appointments(user_id, status=None):
         else:
             appointments = Appointment.objects(user=user).order_by('-appointment_date')
         
+        print(f"Found {len(appointments)} appointments")
+        
+        serialized = []
+        for apt in appointments:
+            try:
+                serialized.append(_serialize_appointment(apt))
+            except Exception as e:
+                print(f"Error serializing appointment {apt.id}: {str(e)}")
+                raise
+        
         return {
-            "appointments": [_serialize_appointment(apt) for apt in appointments],
-            "count": len(appointments)
+            "appointments": serialized,
+            "count": len(serialized)
         }, 200
         
     except Exception as e:
+        print(f"Error in get_user_appointments: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {"message": f"Error fetching appointments: {str(e)}"}, 500
 
 def get_appointment_by_id(appointment_id, user_id):
@@ -239,9 +256,9 @@ def _serialize_appointment(appointment):
         "appointment_date": appointment.appointment_date.strftime("%Y-%m-%d"),
         "appointment_time": appointment.appointment_time,
         "reason": appointment.reason,
-        "notes": appointment.notes,
+        "notes": appointment.notes or "",
         "consultation_type": appointment.consultation_type,
         "status": appointment.status,
-        "created_at": appointment.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-        "updated_at": appointment.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+        "created_at": appointment.created_at.strftime("%Y-%m-%d %H:%M:%S") if appointment.created_at else None,
+        "updated_at": appointment.updated_at.strftime("%Y-%m-%d %H:%M:%S") if appointment.updated_at else None
     }

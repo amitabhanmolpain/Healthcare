@@ -44,6 +44,7 @@ const MyAppointments = () => {
     setLoading(true);
     try {
       const response = await appointmentAPI.getMyAppointments();
+      console.log("Appointments API response:", response);
       // Map doctor images to frontend imports
       const appointmentsWithImages = (response.appointments || []).map(apt => ({
         ...apt,
@@ -52,6 +53,7 @@ const MyAppointments = () => {
           img: doctorImages[apt.doctor.id] || apt.doctor.img
         }
       }));
+      console.log("Appointments with images:", appointmentsWithImages);
       setAppointments(appointmentsWithImages);
     } catch (error) {
       console.error("Error fetching appointments:", error);

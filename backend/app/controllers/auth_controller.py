@@ -115,7 +115,7 @@ def login_user(data):
         }, 401
 
     # Successful login
-    reset_login_attempts(user)
+    _reset_login_attempts(user)
     token = create_access_token(identity=str(user.id), additional_claims={"email": user.email, "name": user.name})
 
     return {
