@@ -295,6 +295,28 @@ medicines_data = [
 ]
 
 def seed_doctors():
+    """Seed the database with doctors data"""
+    print("Starting to seed doctors...")
+    
+    # Clear existing doctors
+    Doctor.objects.delete()
+    print("Cleared existing doctors")
+    
+    # Add all doctors
+    for doctor_data in doctors_data:
+        doctor = Doctor(**doctor_data)
+        doctor.save()
+        print(f"Added: {doctor.name} - {doctor.specialty}")
+    
+    print(f"\nSuccessfully seeded {len(doctors_data)} doctors!")
+    
+    # Display summary
+    print("\n--- Doctors Summary ---")
+    for specialty in set(d['specialty'] for d in doctors_data):
+        count = len([d for d in doctors_data if d['specialty'] == specialty])
+        print(f"{specialty}: {count} doctor(s)")
+
+def seed_medicines():
     """Seed the database with medicines data"""
     print("\nStarting to seed medicines...")
     
@@ -319,152 +341,4 @@ def seed_doctors():
 if __name__ == "__main__":
     with app.app_context():
         seed_doctors()
-        seed_medicine189
-    },
-    {
-        "medicine_id": "med-3",
-        "name": "Amoxicillin 500mg",
-        "category": "antibiotics",
-        "price": 1349,
-        "description": "Antibiotic for bacterial infections",
-        "image": "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&h=300&fit=crop",
-        "requires_prescription": True,
-        "in_stock": True,
-        "rating": 4.6,
-        "reviews": 156
-    },
-    {
-        "medicine_id": "med-4",
-        "name": "Vitamin D3 1000 IU",
-        "category": "vitamins",
-        "price": 1599,
-        "description": "Bone health and immunity support",
-        "image": "https://images.unsplash.com/photo-1550572017-edd951b55104?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": True,
-        "rating": 4.8,
-        "reviews": 412
-    },
-    {
-        "medicine_id": "med-5",
-        "name": "Multivitamin Complex",
-        "category": "vitamins",
-        "price": 2099,
-        "description": "Complete daily vitamin supplement",
-        "image": "https://images.unsplash.com/photo-1526434426615-1abe81efcb0b?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": True,
-        "rating": 4.5,
-        "reviews": 328
-    },
-    {
-        "medicine_id": "med-6",
-        "name": "Cold Relief Syrup",
-        "category": "cold-flu",
-        "price": 1249,
-        "description": "Relief from cold and flu symptoms",
-        "image": "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": True,
-        "rating": 4.4,
-        "reviews": 267
-    },
-    {
-        "medicine_id": "med-7",
-        "name": "Antihistamine Tablets",
-        "category": "pain-relief",
-        "price": 999,
-        "description": "For allergy relief",
-        "image": "https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": True,
-        "rating": 4.6,
-        "reviews": 198
-    },
-    {
-        "medicine_id": "med-8",
-        "name": "Cough Suppressant",
-        "category": "cold-flu",
-        "price": 1149,
-        "description": "Effective cough relief",
-        "image": "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": False,
-        "rating": 4.3,
-        "reviews": 145
-    },
-    {
-        "medicine_id": "med-9",
-        "name": "Omega-3 Fish Oil",
-        "category": "vitamins",
-        "price": 2499,
-        "description": "Heart and brain health support",
-        "image": "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": True,
-        "rating": 4.7,
-        "reviews": 389
-    },
-    {
-        "medicine_id": "med-10",
-        "name": "Azithromycin 500mg",
-        "category": "antibiotics",
-        "price": 1949,
-        "description": "Broad-spectrum antibiotic",
-        "image": "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400&h=300&fit=crop",
-        "requires_prescription": True,
-        "in_stock": True,
-        "rating": 4.5,
-        "reviews": 142
-    },
-    {
-        "medicine_id": "med-11",
-        "name": "Vitamin C 1000mg",
-        "category": "vitamins",
-        "price": 1399,
-        "description": "Immune system support",
-        "image": "https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": True,
-        "rating": 4.6,
-        "reviews": 456
-    },
-    {
-        "medicine_id": "med-12",
-        "name": "Pain Relief Gel",
-        "category": "pain-relief",
-        "price": 1699,
-        "description": "Topical pain relief",
-        "image": "https://images.unsplash.com/photo-1550572017-edd951b55104?w=400&h=300&fit=crop",
-        "requires_prescription": False,
-        "in_stock": True,
-        "rating": 4.4,
-        "reviews": 223
-    }
-]
-
-def seed_doctors():
-    """Seed the database with doctors data"""
-    print("Starting to seed doctors...")
-    
-    # Clear existing doctors
-    Doctor.objects.delete()
-    print("Cleared existing doctors")
-    
-    # Add all doctors
-    for doctor_data in doctors_data:
-        doctor = Doctor(**doctor_data)
-        doctor.save()
-        print(f"Added: {doctor.name} - {doctor.specialty}")
-    
-    print(f"\nSuccessfully seeded {len(doctors_data)} doctors!")
-    
-    # Display summary
-    print("\n--- Doctors Summary ---")
-    for specialty in set(d['specialty'] for d in doctors_data):
-        count = len([d for d in doctors_data if d['specialty'] == specialty])
-        print(f"{specialty}: {count} doctor(s)")
-
-if __name__ == "__main__":
-    with app.app_context():
-        seed_doctors()
+        seed_medicines()
