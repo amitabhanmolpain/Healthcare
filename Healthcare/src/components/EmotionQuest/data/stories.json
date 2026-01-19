@@ -1,0 +1,664 @@
+{
+  "chapters": [
+    {
+      "id": 1,
+      "title": "Handling Criticism",
+      "description": "Learn to respond to feedback in a healthy way",
+      "skill": "Cognitive Reframing",
+      "difficulty": "Beginner",
+      "color": "from-blue-500 to-cyan-500",
+      "icon": "💬",
+      "scenes": [
+        {
+          "id": 1,
+          "character": "boss",
+          "characterName": "Your Manager",
+          "text": "I've reviewed your project report. There are several areas that need improvement. The data analysis section lacks depth.",
+          "emotion": "serious",
+          "choices": [
+            {
+              "id": "a",
+              "text": "I'm terrible at my job. I should just quit.",
+              "correct": false,
+              "feedback": "This is catastrophizing - jumping to an extreme conclusion. Criticism of one task doesn't mean you're bad at everything.",
+              "skill": "Avoid catastrophizing",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "Thank you for the feedback. Can you help me understand what specific improvements you'd like to see?",
+              "correct": true,
+              "feedback": "Excellent! You're staying calm and seeking clarification. This helps you learn and grow.",
+              "skill": "Accepting feedback constructively",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "You never appreciate my work. This is unfair!",
+              "correct": false,
+              "feedback": "Getting defensive blocks learning. Try to see feedback as an opportunity to improve, not a personal attack.",
+              "skill": "Avoid defensiveness",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "character": "self",
+          "characterName": "Your Inner Voice",
+          "text": "After the meeting, you feel upset. Your inner voice says: 'Everyone thinks I'm incompetent now.'",
+          "emotion": "anxious",
+          "choices": [
+            {
+              "id": "a",
+              "text": "They're right. I'm not good enough for this job.",
+              "correct": false,
+              "feedback": "This is mind reading - assuming you know what others think. You don't have evidence for this.",
+              "skill": "Challenge mind reading",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "I made a mistake, but it doesn't define my entire worth. I can learn from this.",
+              "correct": true,
+              "feedback": "Perfect! You're separating one action from your overall value. This is healthy self-talk.",
+              "skill": "Balanced self-assessment",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "I'll just avoid my manager from now on.",
+              "correct": false,
+              "feedback": "Avoidance doesn't solve the problem. Facing challenges helps you grow stronger.",
+              "skill": "Face challenges",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "character": "friend",
+          "characterName": "Your Friend Sarah",
+          "text": "Sarah texts: 'Hey! How was your day at work?' How do you respond?",
+          "emotion": "friendly",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Awful. I got criticized and I'm a failure.",
+              "correct": false,
+              "feedback": "You're catastrophizing again. Try to express your feelings without exaggerating.",
+              "skill": "Express feelings accurately",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "It was challenging. Got some tough feedback on my report, but I'm working on improving it.",
+              "correct": true,
+              "feedback": "Great! You're being honest while maintaining perspective. This is emotionally intelligent communication.",
+              "skill": "Balanced communication",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Fine. Nothing worth talking about.",
+              "correct": false,
+              "feedback": "Bottling up emotions can increase stress. Sharing with trusted friends helps process feelings.",
+              "skill": "Open communication",
+              "xp": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Managing Anxiety",
+      "description": "Control anxious thoughts and find calm",
+      "skill": "Anxiety Management",
+      "difficulty": "Beginner",
+      "color": "from-purple-500 to-pink-500",
+      "icon": "🌊",
+      "scenes": [
+        {
+          "id": 1,
+          "character": "self",
+          "characterName": "Your Mind",
+          "text": "It's 2 AM. You suddenly wake up thinking about tomorrow's presentation. Your heart is racing.",
+          "emotion": "anxious",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Start rehearsing the presentation over and over in your mind.",
+              "correct": false,
+              "feedback": "Ruminating at night increases anxiety and prevents sleep. Your tired brain won't help you perform better.",
+              "skill": "Break rumination cycle",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "Take slow, deep breaths. 'I've prepared well. I can handle this. Right now, I need rest.'",
+              "correct": true,
+              "feedback": "Excellent! Deep breathing calms your nervous system, and reframing helps reduce anxiety.",
+              "skill": "Breathing and reframing",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "This is going to be a disaster. I should call in sick.",
+              "correct": false,
+              "feedback": "Avoidance reinforces anxiety. Facing fears (with preparation) is how you build confidence.",
+              "skill": "Face fears, not avoid",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "character": "colleague",
+          "characterName": "Your Colleague Mike",
+          "text": "Before the presentation, Mike says: 'Wow, you look nervous! Are you okay?'",
+          "emotion": "concerned",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Now everyone will see I'm nervous and think I'm weak!",
+              "correct": false,
+              "feedback": "Anxiety about anxiety makes it worse. Nervousness is normal and doesn't mean weakness.",
+              "skill": "Accept nervousness",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "I'm a bit nervous, but that's normal! It means I care about doing well.",
+              "correct": true,
+              "feedback": "Perfect! Normalizing nervousness reduces its power. Reframing it as caring is healthy.",
+              "skill": "Normalize and reframe emotions",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "I'm fine! (while panicking internally)",
+              "correct": false,
+              "feedback": "Denying emotions doesn't make them go away. Acknowledging feelings helps you manage them.",
+              "skill": "Acknowledge emotions",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "character": "audience",
+          "characterName": "During Presentation",
+          "text": "Mid-presentation, you lose your train of thought for a moment. What do you do?",
+          "emotion": "neutral",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Panic internally: 'Everyone thinks I'm incompetent! This is humiliating!'",
+              "correct": false,
+              "feedback": "Catastrophizing makes it harder to recover. A brief pause is normal and rarely noticed by others.",
+              "skill": "Reality check",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "Take a breath, glance at notes, and continue: 'Let me revisit that point...'",
+              "correct": true,
+              "feedback": "Excellent composure! Brief pauses show confidence, not weakness. You recovered gracefully.",
+              "skill": "Recover with grace",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Rush through the rest without pausing, speaking faster.",
+              "correct": false,
+              "feedback": "Rushing due to anxiety makes things worse. Slowing down helps you regain control.",
+              "skill": "Slow down when anxious",
+              "xp": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Positive Self-Talk",
+      "description": "Replace negative thoughts with balanced ones",
+      "skill": "Positive Thinking",
+      "difficulty": "Intermediate",
+      "color": "from-yellow-500 to-orange-500",
+      "icon": "☀️",
+      "scenes": [
+        {
+          "id": 1,
+          "character": "self",
+          "characterName": "Morning Thoughts",
+          "text": "You wake up and immediately think: 'Ugh, another Monday. This week is going to be terrible.'",
+          "emotion": "tired",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Continue dwelling on how much you hate Mondays.",
+              "correct": false,
+              "feedback": "Negative predictions create a self-fulfilling prophecy. Your mindset shapes your experience.",
+              "skill": "Avoid negative predictions",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I'm starting fresh. I can't predict the week, but I can handle today.'",
+              "correct": true,
+              "feedback": "Great! You're staying present and focusing on what you can control. This reduces overwhelm.",
+              "skill": "Stay present-focused",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "'Everything is always perfect! I love Mondays!' (forcing fake positivity)",
+              "correct": false,
+              "feedback": "Forced positivity isn't genuine. Balanced thinking acknowledges reality while staying hopeful.",
+              "skill": "Be authentically balanced",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "character": "mirror",
+          "characterName": "Looking in the Mirror",
+          "text": "You look in the mirror and immediately notice perceived flaws. Your inner critic activates.",
+          "emotion": "self-critical",
+          "choices": [
+            {
+              "id": "a",
+              "text": "'I look awful. Everyone will judge me today.'",
+              "correct": false,
+              "feedback": "Self-criticism lowers confidence. Others are focused on themselves, not analyzing you.",
+              "skill": "Challenge self-criticism",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I'm human, not perfect. My worth isn't determined by appearance.'",
+              "correct": true,
+              "feedback": "Excellent self-compassion! You're challenging unrealistic standards and valuing yourself beyond looks.",
+              "skill": "Practice self-compassion",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Avoid mirrors for the rest of the day.",
+              "correct": false,
+              "feedback": "Avoidance doesn't build confidence. Acceptance and self-compassion do.",
+              "skill": "Practice acceptance",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "character": "failure",
+          "characterName": "After a Setback",
+          "text": "You didn't get the promotion you applied for. How do you talk to yourself?",
+          "emotion": "disappointed",
+          "choices": [
+            {
+              "id": "a",
+              "text": "'I'm not good enough. I'll never succeed.'",
+              "correct": false,
+              "feedback": "One setback doesn't define your future. This is overgeneralizing from a single event.",
+              "skill": "Avoid overgeneralizing",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'This is disappointing, but it doesn't mean I'm a failure. I can learn and try again.'",
+              "correct": true,
+              "feedback": "Perfect resilience! You're acknowledging the feeling while maintaining perspective and hope.",
+              "skill": "Resilient self-talk",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "'I don't care anyway. It wasn't important.'",
+              "correct": false,
+              "feedback": "Minimizing genuine feelings isn't healthy. It's okay to feel disappointed and still move forward.",
+              "skill": "Honor true feelings",
+              "xp": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Effective Communication",
+      "description": "Express yourself clearly and listen actively",
+      "skill": "Communication Skills",
+      "difficulty": "Intermediate",
+      "color": "from-green-500 to-teal-500",
+      "icon": "💭",
+      "scenes": [
+        {
+          "id": 1,
+          "character": "partner",
+          "characterName": "Your Partner",
+          "text": "Your partner forgot an important date you had planned. You feel hurt. How do you express this?",
+          "emotion": "forgetful",
+          "choices": [
+            {
+              "id": "a",
+              "text": "'You never care about what's important to me! You're so selfish!'",
+              "correct": false,
+              "feedback": "Attacking puts them defensive. Use 'I feel' statements instead of 'You always/never' accusations.",
+              "skill": "Use I-statements",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I feel hurt that our date was forgotten. It was important to me. Can we talk about this?'",
+              "correct": true,
+              "feedback": "Excellent communication! You expressed feelings without attacking, and invited dialogue.",
+              "skill": "Non-violent communication",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Say nothing, but act cold and distant.",
+              "correct": false,
+              "feedback": "Passive aggression creates confusion. Clear communication prevents resentment from building.",
+              "skill": "Be direct, not passive-aggressive",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "character": "friend",
+          "characterName": "Friend Venting",
+          "text": "Your friend is upset and venting about their problems. What's the best response?",
+          "emotion": "upset",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Immediately jump in with solutions: 'Here's what you should do...'",
+              "correct": false,
+              "feedback": "Sometimes people need to be heard, not fixed. Ask if they want advice before giving it.",
+              "skill": "Listen before solving",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'That sounds really difficult. I'm here for you. Do you want to talk it through or would advice help?'",
+              "correct": true,
+              "feedback": "Perfect! You validated their feelings and asked what kind of support they need. This is active listening.",
+              "skill": "Active listening and validation",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "'Yeah, my problems are worse. Let me tell you about my day...'",
+              "correct": false,
+              "feedback": "This shifts focus away from them. Support means being present for their experience first.",
+              "skill": "Stay present for others",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "character": "roommate",
+          "characterName": "Your Roommate",
+          "text": "Your roommate leaves dishes piling up constantly. You need to address this. How?",
+          "emotion": "messy",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Leave a passive-aggressive note: 'Some people are slobs.'",
+              "correct": false,
+              "feedback": "This creates hostility without solving the problem. Direct conversation is more effective.",
+              "skill": "Communicate directly",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'Hey, can we talk about the dishes? I feel stressed when they pile up. Can we create a system that works for both of us?'",
+              "correct": true,
+              "feedback": "Excellent! You shared your feelings, stated the problem, and invited collaboration on a solution.",
+              "skill": "Assertive communication",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Say nothing and silently resent them while doing all dishes.",
+              "correct": false,
+              "feedback": "Avoiding conflict builds resentment. Healthy relationships require expressing needs respectfully.",
+              "skill": "Express needs",
+              "xp": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Building Self-Confidence",
+      "description": "Develop inner strength and self-belief",
+      "skill": "Self-Confidence",
+      "difficulty": "Intermediate",
+      "color": "from-red-500 to-pink-500",
+      "icon": "💪",
+      "scenes": [
+        {
+          "id": 1,
+          "character": "opportunity",
+          "characterName": "New Opportunity",
+          "text": "You're offered a leadership role at work, but you immediately think: 'I'm not qualified enough for this.'",
+          "emotion": "uncertain",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Decline immediately: 'I can't do this. Someone else is better suited.'",
+              "correct": false,
+              "feedback": "Imposter syndrome makes you underestimate yourself. Growth happens outside comfort zones.",
+              "skill": "Challenge imposter syndrome",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I may not have all the answers yet, but I have valuable skills and can learn. I'll take this challenge.'",
+              "correct": true,
+              "feedback": "Excellent confidence! You acknowledged uncertainty while recognizing your capabilities and growth potential.",
+              "skill": "Growth mindset",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "'I'm perfect for this! I know everything already.'",
+              "correct": false,
+              "feedback": "Overconfidence without humility can backfire. Balanced confidence includes knowing you can learn.",
+              "skill": "Balanced confidence",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "character": "social",
+          "characterName": "Social Event",
+          "text": "At a networking event, you feel intimidated by successful people around you. What do you tell yourself?",
+          "emotion": "nervous",
+          "choices": [
+            {
+              "id": "a",
+              "text": "'Everyone here is more accomplished than me. I don't belong.'",
+              "correct": false,
+              "feedback": "Comparing yourself to others' highlight reels hurts confidence. Everyone has their own journey.",
+              "skill": "Stop harmful comparisons",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I have unique experiences and perspectives to offer. I belong here just as much as anyone.'",
+              "correct": true,
+              "feedback": "Perfect! You're recognizing your own value instead of measuring against others. This is true confidence.",
+              "skill": "Recognize your value",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Hide in the corner and leave early.",
+              "correct": false,
+              "feedback": "Avoidance prevents growth. Confidence builds through action, even when uncomfortable.",
+              "skill": "Act despite discomfort",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "character": "mistake",
+          "characterName": "After a Mistake",
+          "text": "You made an error in front of your team. You feel embarrassed. How do you recover?",
+          "emotion": "embarrassed",
+          "choices": [
+            {
+              "id": "a",
+              "text": "'I'm so stupid. They'll never respect me now.'",
+              "correct": false,
+              "feedback": "One mistake doesn't erase your competence. Self-compassion after errors is crucial for confidence.",
+              "skill": "Practice self-compassion",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I made a mistake, and that's human. I'll acknowledge it, fix it, and move forward.'",
+              "correct": true,
+              "feedback": "Excellent resilience! Owning mistakes without self-flagellation shows true confidence and maturity.",
+              "skill": "Own mistakes confidently",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Make excuses and blame others to save face.",
+              "correct": false,
+              "feedback": "Defensiveness undermines trust. Confident people can admit errors without losing self-worth.",
+              "skill": "Take responsibility",
+              "xp": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Stress Management",
+      "description": "Handle pressure and find balance",
+      "skill": "Stress Control",
+      "difficulty": "Advanced",
+      "color": "from-indigo-500 to-purple-500",
+      "icon": "🧘",
+      "scenes": [
+        {
+          "id": 1,
+          "character": "overwhelmed",
+          "characterName": "Overwhelming Week",
+          "text": "You have three deadlines, family obligations, and your car broke down. You feel completely overwhelmed.",
+          "emotion": "stressed",
+          "choices": [
+            {
+              "id": "a",
+              "text": "'I can't handle this! Everything is falling apart! I'm going to fail at everything!'",
+              "correct": false,
+              "feedback": "Catastrophizing increases stress. Breaking problems into smaller pieces makes them manageable.",
+              "skill": "Break down problems",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'This is a lot, but I can prioritize. First, what absolutely must be done today? I'll handle one thing at a time.'",
+              "correct": true,
+              "feedback": "Excellent coping! Prioritizing and taking it step-by-step reduces overwhelm and increases control.",
+              "skill": "Prioritize and break down tasks",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Procrastinate by scrolling social media to avoid thinking about it.",
+              "correct": false,
+              "feedback": "Avoidance increases anxiety. Facing stressors with a plan reduces them.",
+              "skill": "Face stressors",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "character": "boundary",
+          "characterName": "Extra Request",
+          "text": "Your friend asks you to help them move this weekend, but you're already exhausted and overscheduled.",
+          "emotion": "requesting",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Say yes despite being burned out, feeling resentful.",
+              "correct": false,
+              "feedback": "Saying yes when you mean no builds resentment and burnout. Healthy boundaries protect your well-being.",
+              "skill": "Set healthy boundaries",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I really wish I could help, but I'm completely exhausted this weekend. Can I help you another way?'",
+              "correct": true,
+              "feedback": "Perfect boundary-setting! You declined respectfully while showing you care. This protects your mental health.",
+              "skill": "Assertive boundary-setting",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "'No! I'm way too busy! Find someone else!'",
+              "correct": false,
+              "feedback": "You can set boundaries while still being kind. Respectful 'no' maintains relationships.",
+              "skill": "Kind boundary communication",
+              "xp": 5
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "character": "self_care",
+          "characterName": "Self-Care Moment",
+          "text": "You're exhausted, but there's still work you could do tonight. What do you choose?",
+          "emotion": "tired",
+          "choices": [
+            {
+              "id": "a",
+              "text": "Push through exhaustion to finish everything tonight.",
+              "correct": false,
+              "feedback": "Burnout reduces productivity and harms health. Rest is productive - it restores your energy.",
+              "skill": "Recognize need for rest",
+              "xp": 5
+            },
+            {
+              "id": "b",
+              "text": "'I've done enough today. Resting now will help me perform better tomorrow. I'm taking the evening off.'",
+              "correct": true,
+              "feedback": "Excellent self-care! Recognizing limits and prioritizing rest prevents burnout and sustains long-term performance.",
+              "skill": "Prioritize rest and recovery",
+              "xp": 20
+            },
+            {
+              "id": "c",
+              "text": "Feel guilty about resting but do it anyway, unable to enjoy it.",
+              "correct": false,
+              "feedback": "Rest without guilt is important. You deserve recovery time - it's not laziness, it's necessary.",
+              "skill": "Rest without guilt",
+              "xp": 5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
