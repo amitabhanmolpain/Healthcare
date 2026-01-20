@@ -55,10 +55,16 @@ def create_app():
     from app.routes.appointment_routes import appointment_bp
     from app.routes.medicine_routes import medicine_bp
     from app.routes.admin_routes import admin_bp
+    from app.routes.cart_routes import cart_bp
+    from app.routes.order_routes import order_bp
+    from app.routes.address_routes import address_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(doctor_bp)
     app.register_blueprint(appointment_bp)
     app.register_blueprint(medicine_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(cart_bp)
+    app.register_blueprint(order_bp)
+    app.register_blueprint(address_bp)
     
     return app

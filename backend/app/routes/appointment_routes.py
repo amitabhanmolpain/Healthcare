@@ -11,7 +11,7 @@ from app.controllers.appointment_controller import (
     get_upcoming_appointments
 )
 
-appointment_bp = Blueprint("appointments", __name__)
+appointment_bp = Blueprint("appointments", __name__, url_prefix='/api')
 api = Api(appointment_bp)
 
 class AppointmentCreate(Resource):

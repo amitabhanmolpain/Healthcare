@@ -10,7 +10,7 @@ from app.controllers.medicine_controller import (
     get_in_stock_medicines
 )
 
-medicine_bp = Blueprint('medicine', __name__)
+medicine_bp = Blueprint('medicine', __name__, url_prefix='/api')
 api = Api(medicine_bp)
 
 class MedicineList(Resource):

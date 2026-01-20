@@ -2,7 +2,7 @@ from flask import Blueprint, request
 from flask_restful import Api, Resource
 from app.controllers.auth_controller import register_user, login_user
 
-auth_bp = Blueprint("auth", __name__)
+auth_bp = Blueprint("auth", __name__, url_prefix='/api')
 api = Api(auth_bp)
 
 class Register(Resource):

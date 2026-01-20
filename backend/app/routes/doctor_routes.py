@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from flask_restful import Api, Resource
 from app.models.doctor_model import Doctor
 
-doctor_bp = Blueprint("doctors", __name__)
+doctor_bp = Blueprint("doctors", __name__, url_prefix='/api')
 api = Api(doctor_bp)
 
 class DoctorList(Resource):

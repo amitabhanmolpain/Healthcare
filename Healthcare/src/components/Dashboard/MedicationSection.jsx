@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from 'react-hot-toast';
 import { 
   Pill, 
@@ -20,15 +20,28 @@ import {
   ArrowLeft,
   MapPin,
   Home,
-  User
+  User,
+  Phone,
+  CheckCircle,
+  Edit,
+  ClipboardList,
+  History,
+  Loader2
 } from "lucide-react";
+import { cartAPI } from "../../services/cartApi";
+import { orderAPI } from "../../services/orderApi";
+import { addressAPI } from "../../services/addressApi";
 
 const MedicationSection = () => {
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [currentView, setCurrentView] = useState("medications"); // medications, cart, checkout
+  const [currentView, setCurrentView] = useState("medications"); // medications, cart, address, orderConfirmation
   const [showPrescriptionUpload, setShowPrescriptionUpload] = useState(false);
+  const [cartTab, setCartTab] = useState("cart"); // cart, orders, addresses
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [previousOrders, setPreviousOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState({
     fullName: "",
     phone: "",
@@ -39,6 +52,84 @@ const MedicationSection = () => {
     pincode: "",
     addressType: "home"
   });
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchCart();
+    fetchOrders();
+    fetchAddresses();
+  }, []);
+
+  const fetchCart = async () => {
+    try {
+      const response = await cartAPI.getCart();
+      if (response.success && response.cart) {
+        // Transform backend cart items to match frontend format
+        const cartItems = response.cart.items.map(item => ({
+          id: item.medicine_id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          description: item.description,
+          requiresPrescription: item.requires_prescription
+        }));
+        setCart(cartItems);
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const response = await orderAPI.getOrders();
+      if (response.success && response.orders) {
+        // Transform backend orders to match frontend format
+        const orders = response.orders.map(order => ({
+          id: order.order_id,
+          date: order.created_at,
+          items: order.items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          total: order.total,
+          status: order.status,
+          deliveryAddress: order.delivery_address 
+            ? `${order.delivery_address.address_line1}, ${order.delivery_address.city} - ${order.delivery_address.pincode}`
+            : ''
+        }));
+        setPreviousOrders(orders);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
+
+  const fetchAddresses = async () => {
+    try {
+      const response = await addressAPI.getAddresses();
+      if (response.success && response.addresses) {
+        // Transform backend addresses to match frontend format
+        const addresses = response.addresses.map(addr => ({
+          id: addr.id,
+          fullName: addr.full_name,
+          phone: addr.phone,
+          addressLine1: addr.address_line1,
+          addressLine2: addr.address_line2,
+          city: addr.city,
+          state: addr.state,
+          pincode: addr.pincode,
+          addressType: addr.address_type,
+          isDefault: addr.is_default
+        }));
+        setSavedAddresses(addresses);
+      }
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+    }
+  };
 
   const categories = [
     { id: "all", label: "All", icon: Package },
@@ -202,36 +293,81 @@ const MedicationSection = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (medication) => {
-    const existingItem = cart.find(item => item.id === medication.id);
-    
-    if (existingItem) {
-      setCart(cart.map(item =>
-        item.id === medication.id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
-      toast.success(`Increased ${medication.name} quantity`);
-    } else {
-      setCart([...cart, { ...medication, quantity: 1 }]);
+  const addToCart = async (medication) => {
+    try {
+      const existingItem = cart.find(item => item.id === medication.id);
+      
+      if (existingItem) {
+        // Update quantity in backend
+        const newQuantity = existingItem.quantity + 1;
+        await cartAPI.updateCartItem(medication.id.toString(), newQuantity);
+        setCart(cart.map(item =>
+          item.id === medication.id
+            ? { ...item, quantity: newQuantity }
+            : item
+        ));
+        toast.success(`Increased ${medication.name} quantity`);
+      } else {
+        // Add new item to backend
+        await cartAPI.addToCart(medication);
+        setCart([...cart, { ...medication, quantity: 1 }]);
+        toast.success(`${medication.name} added to cart`);
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      // Fallback to local state if API fails
+      const existingItem = cart.find(item => item.id === medication.id);
+      if (existingItem) {
+        setCart(cart.map(item =>
+          item.id === medication.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        ));
+      } else {
+        setCart([...cart, { ...medication, quantity: 1 }]);
+      }
       toast.success(`${medication.name} added to cart`);
     }
   };
 
-  const removeFromCart = (medicationId) => {
+  const removeFromCart = async (medicationId) => {
     const item = cart.find(item => item.id === medicationId);
-    setCart(cart.filter(item => item.id !== medicationId));
-    toast.success(`${item.name} removed from cart`);
+    try {
+      await cartAPI.removeFromCart(medicationId.toString());
+      setCart(cart.filter(item => item.id !== medicationId));
+      toast.success(`${item?.name || 'Item'} removed from cart`);
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      // Fallback to local state
+      setCart(cart.filter(item => item.id !== medicationId));
+      toast.success(`${item?.name || 'Item'} removed from cart`);
+    }
   };
 
-  const updateQuantity = (medicationId, delta) => {
-    setCart(cart.map(item => {
-      if (item.id === medicationId) {
-        const newQuantity = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    }));
+  const updateQuantity = async (medicationId, delta) => {
+    const item = cart.find(item => item.id === medicationId);
+    if (!item) return;
+    
+    const newQuantity = Math.max(1, item.quantity + delta);
+    
+    try {
+      await cartAPI.updateCartItem(medicationId.toString(), newQuantity);
+      setCart(cart.map(item => {
+        if (item.id === medicationId) {
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      }));
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      // Fallback to local state
+      setCart(cart.map(item => {
+        if (item.id === medicationId) {
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      }));
+    }
   };
 
   const getTotalPrice = () => {
@@ -243,7 +379,14 @@ const MedicationSection = () => {
       toast.error('Your cart is empty');
       return;
     }
-    setCurrentView("checkout");
+    setCurrentView("address");
+  };
+
+  const handleContinueToOrder = () => {
+    if (!validateAddress()) {
+      return;
+    }
+    setCurrentView("orderConfirmation");
   };
 
   const validateAddress = () => {
@@ -281,31 +424,129 @@ const MedicationSection = () => {
     }
   };
 
-  const completeOrder = () => {
-    toast.success('Order placed successfully! Expected delivery in 2-3 days');
-    setCart([]);
-    setCurrentView("medications");
-    setDeliveryAddress({
-      fullName: "",
-      phone: "",
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      state: "",
-      pincode: "",
-      addressType: "home"
-    });
-    setShowPrescriptionUpload(false);
+  const completeOrder = async (prescriptionUploaded = false, prescriptionUrl = null) => {
+    setLoading(true);
+    try {
+      const orderData = {
+        items: cart,
+        deliveryAddress: deliveryAddress,
+        paymentMethod: 'COD',
+        prescriptionUploaded,
+        prescriptionUrl
+      };
+      
+      const response = await orderAPI.createOrder(orderData);
+      
+      if (response.success) {
+        toast.success('Order placed successfully! Expected delivery in 2-3 days');
+        setCart([]);
+        setCurrentView("medications");
+        setDeliveryAddress({
+          fullName: "",
+          phone: "",
+          addressLine1: "",
+          addressLine2: "",
+          city: "",
+          state: "",
+          pincode: "",
+          addressType: "home"
+        });
+        setShowPrescriptionUpload(false);
+        // Refresh orders list
+        fetchOrders();
+      } else {
+        toast.error(response.message || 'Failed to place order');
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast.error('Failed to place order. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePrescriptionUpload = () => {
     toast.success('Prescription uploaded! Proceeding with order');
     setTimeout(() => {
-      completeOrder();
+      completeOrder(true, 'prescription_uploaded');
     }, 1000);
   };
 
-  // Cart View
+  // Address management functions
+  const handleSaveAddress = async (addressData, isEdit = false, addressId = null) => {
+    setLoading(true);
+    try {
+      let response;
+      if (isEdit && addressId) {
+        response = await addressAPI.updateAddress(addressId, addressData);
+      } else {
+        response = await addressAPI.createAddress(addressData);
+      }
+      
+      if (response.success) {
+        toast.success(isEdit ? 'Address updated!' : 'Address saved!');
+        fetchAddresses();
+        return true;
+      } else {
+        toast.error(response.message || 'Failed to save address');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast.error('Failed to save address');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    try {
+      const response = await addressAPI.deleteAddress(addressId);
+      if (response.success) {
+        toast.success('Address deleted');
+        fetchAddresses();
+      } else {
+        toast.error(response.message || 'Failed to delete address');
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      toast.error('Failed to delete address');
+    }
+  };
+
+  const handleSetDefaultAddress = async (addressId) => {
+    try {
+      const response = await addressAPI.setDefaultAddress(addressId);
+      if (response.success) {
+        toast.success('Default address updated');
+        fetchAddresses();
+      } else {
+        toast.error(response.message || 'Failed to update default address');
+      }
+    } catch (error) {
+      console.error('Error setting default address:', error);
+      toast.error('Failed to update default address');
+    }
+  };
+
+  const handleReorder = async (orderId) => {
+    try {
+      const response = await orderAPI.reorder(orderId);
+      if (response.success) {
+        toast.success('Items added to cart!');
+        fetchCart();
+        setCartTab("cart");
+      } else {
+        toast.error(response.message || 'Failed to reorder');
+      }
+    } catch (error) {
+      console.error('Error reordering:', error);
+      toast.error('Failed to add items to cart');
+    }
+  };
+
+  // Cart View with Tabs
   if (currentView === "cart") {
     return (
       <div className="space-y-6">
@@ -332,154 +573,390 @@ const MedicationSection = () => {
           </div>
         </div>
 
-        {cart.length === 0 ? (
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-16 border border-white/10 shadow-lg text-center">
-            <ShoppingCart size={80} className="mx-auto text-gray-600 mb-4" />
-            <h3 className="text-white text-2xl font-semibold mb-2">Your cart is empty</h3>
-            <p className="text-gray-400 mb-6">Add some medications to get started</p>
+        {/* Tabs */}
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-2 border border-white/10 shadow-lg">
+          <div className="flex gap-2">
             <button
-              onClick={() => setCurrentView("medications")}
-              className="px-8 py-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-semibold hover:shadow-lg transition"
+              onClick={() => setCartTab("cart")}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition ${
+                cartTab === "cart"
+                  ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
+                  : "text-gray-300 hover:text-white hover:bg-white/10"
+              }`}
             >
-              Continue Shopping
+              <ShoppingCart size={20} />
+              Cart ({cart.length})
+            </button>
+            <button
+              onClick={() => setCartTab("orders")}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition ${
+                cartTab === "orders"
+                  ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
+                  : "text-gray-300 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <History size={20} />
+              Previous Orders
+            </button>
+            <button
+              onClick={() => setCartTab("addresses")}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition ${
+                cartTab === "addresses"
+                  ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
+                  : "text-gray-300 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <MapPin size={20} />
+              Saved Addresses
             </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-4">
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg"
-                >
-                  <div className="flex gap-4">
-                    <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-purple-700/30">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="text-white font-semibold text-lg">{item.name}</h3>
-                          <p className="text-gray-400 text-sm">{item.description}</p>
-                          {item.requiresPrescription && (
-                            <span className="inline-flex items-center gap-1 text-xs text-yellow-400 mt-1">
-                              <Package size={12} />
-                              Prescription Required
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-red-400 hover:text-red-300 transition"
-                        >
-                          <Trash size={20} />
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-4">
-                        <div className="flex items-center gap-3 bg-purple-700/30 rounded-xl p-2">
-                          <button
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="w-8 h-8 rounded-lg bg-purple-600/50 hover:bg-purple-600 text-white transition flex items-center justify-center"
-                          >
-                            <Minus size={16} />
-                          </button>
-                          <span className="text-white font-semibold w-8 text-center">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="w-8 h-8 rounded-lg bg-purple-600/50 hover:bg-purple-600 text-white transition flex items-center justify-center"
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                        
-                        <div className="text-right">
-                          <p className="text-gray-400 text-sm">₹{item.price} each</p>
-                          <p className="text-green-400 font-bold text-xl">
-                            ₹{item.price * item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        </div>
 
-            {/* Order Summary */}
-            <div className="lg:col-span-1">
-              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg sticky top-6">
-                <h2 className="font-poppins font-semibold text-2xl text-white mb-6">
-                  Order Summary
-                </h2>
-                
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-gray-300">
-                    <span>Subtotal ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-                    <span className="text-white font-medium">₹{getTotalPrice()}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-300">
-                    <span>Delivery Charges</span>
-                    <span className="text-green-400 font-medium">
-                      {getTotalPrice() >= 4000 ? 'FREE' : '₹50'}
-                    </span>
-                  </div>
-                  <div className="border-t border-white/10 pt-3 mt-3">
-                    <div className="flex justify-between text-lg">
-                      <span className="text-white font-semibold">Total</span>
-                      <span className="text-green-400 font-bold text-2xl">
-                        ₹{getTotalPrice() >= 4000 ? getTotalPrice() : getTotalPrice() + 50}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleProceedToCheckout}
-                  className="w-full py-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-bold text-lg hover:shadow-lg transition flex items-center justify-center gap-2 mb-4"
-                >
-                  <CreditCard size={24} />
-                  Proceed to Checkout
-                </button>
-
+        {/* Cart Tab Content */}
+        {cartTab === "cart" && (
+          <>
+            {cart.length === 0 ? (
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-16 border border-white/10 shadow-lg text-center">
+                <ShoppingCart size={80} className="mx-auto text-gray-600 mb-4" />
+                <h3 className="text-white text-2xl font-semibold mb-2">Your cart is empty</h3>
+                <p className="text-gray-400 mb-6">Add some medications to get started</p>
                 <button
                   onClick={() => setCurrentView("medications")}
-                  className="w-full py-3 bg-white/10 hover:bg-white/15 rounded-xl text-white font-medium transition"
+                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-semibold hover:shadow-lg transition"
                 >
                   Continue Shopping
                 </button>
-                
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <div className="flex items-start gap-2 text-gray-400 text-sm mb-3">
-                    <Truck size={16} className="mt-0.5 flex-shrink-0 text-blue-400" />
-                    <span>Free delivery on orders over ₹4000</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-gray-400 text-sm">
-                    <Clock size={16} className="mt-0.5 flex-shrink-0 text-blue-400" />
-                    <span>Expected delivery in 2-3 business days</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Cart Items */}
+                <div className="lg:col-span-2 space-y-4">
+                  {cart.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg"
+                    >
+                      <div className="flex gap-4">
+                        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-purple-700/30">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h3 className="text-white font-semibold text-lg">{item.name}</h3>
+                              <p className="text-gray-400 text-sm">{item.description}</p>
+                              {item.requiresPrescription && (
+                                <span className="inline-flex items-center gap-1 text-xs text-yellow-400 mt-1">
+                                  <Package size={12} />
+                                  Prescription Required
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeFromCart(item.id)}
+                              className="text-red-400 hover:text-red-300 transition"
+                            >
+                              <Trash size={20} />
+                            </button>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center gap-3 bg-purple-700/30 rounded-xl p-2">
+                              <button
+                                onClick={() => updateQuantity(item.id, -1)}
+                                className="w-8 h-8 rounded-lg bg-purple-600/50 hover:bg-purple-600 text-white transition flex items-center justify-center"
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <span className="text-white font-semibold w-8 text-center">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(item.id, 1)}
+                                className="w-8 h-8 rounded-lg bg-purple-600/50 hover:bg-purple-600 text-white transition flex items-center justify-center"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                            
+                            <div className="text-right">
+                              <p className="text-gray-400 text-sm">₹{item.price} each</p>
+                              <p className="text-green-400 font-bold text-xl">
+                                ₹{item.price * item.quantity}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Order Summary */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg sticky top-6">
+                    <h2 className="font-poppins font-semibold text-2xl text-white mb-6">
+                      Order Summary
+                    </h2>
+                    
+                    <div className="space-y-3 mb-6">
+                      <div className="flex justify-between text-gray-300">
+                        <span>Subtotal ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
+                        <span className="text-white font-medium">₹{getTotalPrice()}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-300">
+                        <span>Delivery Charges</span>
+                        <span className="text-green-400 font-medium">
+                          {getTotalPrice() >= 4000 ? 'FREE' : '₹50'}
+                        </span>
+                      </div>
+                      <div className="border-t border-white/10 pt-3 mt-3">
+                        <div className="flex justify-between text-lg">
+                          <span className="text-white font-semibold">Total</span>
+                          <span className="text-green-400 font-bold text-2xl">
+                            ₹{getTotalPrice() >= 4000 ? getTotalPrice() : getTotalPrice() + 50}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleProceedToCheckout}
+                      className="w-full py-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-bold text-lg hover:shadow-lg transition flex items-center justify-center gap-2 mb-4"
+                    >
+                      <CreditCard size={24} />
+                      Proceed to Checkout
+                    </button>
+
+                    <button
+                      onClick={() => setCurrentView("medications")}
+                      className="w-full py-3 bg-white/10 hover:bg-white/15 rounded-xl text-white font-medium transition"
+                    >
+                      Continue Shopping
+                    </button>
+                    
+                    <div className="mt-6 pt-6 border-t border-white/10">
+                      <div className="flex items-start gap-2 text-gray-400 text-sm mb-3">
+                        <Truck size={16} className="mt-0.5 flex-shrink-0 text-blue-400" />
+                        <span>Free delivery on orders over ₹4000</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-gray-400 text-sm">
+                        <Clock size={16} className="mt-0.5 flex-shrink-0 text-blue-400" />
+                        <span>Expected delivery in 2-3 business days</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+            )}
+          </>
+        )}
+
+        {/* Previous Orders Tab Content */}
+        {cartTab === "orders" && (
+          <div className="space-y-4">
+            {previousOrders.length === 0 ? (
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-16 border border-white/10 shadow-lg text-center">
+                <ClipboardList size={80} className="mx-auto text-gray-600 mb-4" />
+                <h3 className="text-white text-2xl font-semibold mb-2">No previous orders</h3>
+                <p className="text-gray-400 mb-6">Your order history will appear here</p>
+                <button
+                  onClick={() => { setCartTab("cart"); setCurrentView("medications"); }}
+                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-semibold hover:shadow-lg transition"
+                >
+                  Start Shopping
+                </button>
+              </div>
+            ) : (
+              previousOrders.map((order) => (
+                <div key={order.id} className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-white font-semibold text-lg">Order #{order.id}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          order.status === "Delivered" 
+                            ? "bg-green-500/20 text-green-400" 
+                            : order.status === "In Transit"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : "bg-yellow-500/20 text-yellow-400"
+                        }`}>
+                          {order.status}
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-sm flex items-center gap-2">
+                        <Clock size={14} />
+                        {new Date(order.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-400 text-sm">Total Amount</p>
+                      <p className="text-green-400 font-bold text-xl">₹{order.total}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-white/10 pt-4 mb-4">
+                    <div className="space-y-2">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-300">{item.name} x{item.quantity}</span>
+                          <span className="text-white">₹{item.price * item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-2 text-gray-400 text-sm bg-purple-700/20 rounded-xl p-3">
+                    <MapPin size={16} className="mt-0.5 flex-shrink-0 text-blue-400" />
+                    <span>{order.deliveryAddress}</span>
+                  </div>
+                  
+                  <div className="flex gap-3 mt-4">
+                    <button className="flex-1 py-2 bg-white/10 hover:bg-white/15 rounded-xl text-white font-medium transition flex items-center justify-center gap-2">
+                      <ClipboardList size={18} />
+                      View Details
+                    </button>
+                    <button 
+                      onClick={() => handleReorder(order.id)}
+                      className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <ShoppingCart size={18} />
+                      Reorder
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Saved Addresses Tab Content */}
+        {cartTab === "addresses" && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-white font-semibold text-xl">Your Saved Addresses</h2>
+              <button
+                onClick={() => {
+                  setDeliveryAddress({
+                    fullName: "",
+                    phone: "",
+                    addressLine1: "",
+                    addressLine2: "",
+                    city: "",
+                    state: "",
+                    pincode: "",
+                    addressType: "home"
+                  });
+                  setCurrentView("address");
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-medium transition flex items-center gap-2 hover:shadow-lg"
+              >
+                <Plus size={18} />
+                Add New Address
+              </button>
             </div>
+            
+            {savedAddresses.length === 0 ? (
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-16 border border-white/10 shadow-lg text-center">
+                <MapPin size={80} className="mx-auto text-gray-600 mb-4" />
+                <h3 className="text-white text-2xl font-semibold mb-2">No saved addresses</h3>
+                <p className="text-gray-400 mb-6">Add an address for faster checkout</p>
+                <button
+                  onClick={() => setCurrentView("address")}
+                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-semibold hover:shadow-lg transition"
+                >
+                  Add Address
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedAddresses.map((address) => (
+                  <div key={address.id} className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg relative">
+                    {address.isDefault && (
+                      <span className="absolute top-4 right-4 px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-lg">
+                        Default
+                      </span>
+                    )}
+                    
+                    <div className="flex items-center gap-2 mb-3">
+                      {address.addressType === "home" && <Home size={18} className="text-green-400" />}
+                      {address.addressType === "work" && <Package size={18} className="text-blue-400" />}
+                      {address.addressType === "other" && <MapPin size={18} className="text-purple-400" />}
+                      <span className="text-white font-medium capitalize">{address.addressType}</span>
+                    </div>
+                    
+                    <p className="text-white font-semibold mb-1">{address.fullName}</p>
+                    <p className="text-gray-300 text-sm">{address.addressLine1}</p>
+                    {address.addressLine2 && <p className="text-gray-300 text-sm">{address.addressLine2}</p>}
+                    <p className="text-gray-300 text-sm">{address.city}, {address.state} - {address.pincode}</p>
+                    <p className="text-gray-400 text-sm mt-2 flex items-center gap-2">
+                      <Phone size={14} />
+                      {address.phone}
+                    </p>
+                    
+                    <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
+                      <button
+                        onClick={() => {
+                          setDeliveryAddress({
+                            id: address.id,
+                            fullName: address.fullName,
+                            phone: address.phone,
+                            addressLine1: address.addressLine1,
+                            addressLine2: address.addressLine2 || '',
+                            city: address.city,
+                            state: address.state,
+                            pincode: address.pincode,
+                            addressType: address.addressType
+                          });
+                          setCurrentView("address");
+                        }}
+                        className="flex-1 py-2 bg-white/10 hover:bg-white/15 rounded-xl text-white font-medium transition flex items-center justify-center gap-2"
+                      >
+                        <Edit size={16} />
+                        Edit
+                      </button>
+                      {!address.isDefault && (
+                        <button
+                          onClick={() => handleSetDefaultAddress(address.id)}
+                          className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-medium transition flex items-center justify-center gap-2"
+                        >
+                          <Check size={16} />
+                          Set Default
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (address.isDefault && savedAddresses.length > 1) {
+                            toast.error('Cannot delete default address');
+                            return;
+                          }
+                          handleDeleteAddress(address.id);
+                        }}
+                        className="py-2 px-3 bg-red-500/20 hover:bg-red-500/30 rounded-xl text-red-400 transition"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
     );
   }
 
-  // Checkout View
-  if (currentView === "checkout") {
+  // Address View
+  if (currentView === "address") {
     return (
       <div className="space-y-6">
-        {/* Checkout Header */}
+        {/* Address Header */}
         <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-2xl p-8 backdrop-blur-sm border border-purple-500/20 shadow-xl">
           <div className="flex items-center gap-4">
             <button
@@ -490,205 +967,336 @@ const MedicationSection = () => {
             </button>
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <CreditCard size={32} className="text-purple-400" />
+                <MapPin size={32} className="text-purple-400" />
                 <h1 className="font-poppins font-bold text-4xl text-white">
-                  Checkout
+                  Delivery Address
                 </h1>
               </div>
               <p className="text-gray-200 text-lg">
-                Complete your order
+                Where should we deliver your order?
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-lg">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center gap-2 text-gray-300 mb-2">
+                    <User size={16} />
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={deliveryAddress.fullName}
+                    onChange={(e) => setDeliveryAddress({...deliveryAddress, fullName: e.target.value})}
+                    placeholder="Enter your full name"
+                    className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-gray-300 mb-2">
+                    <Phone size={16} />
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    value={deliveryAddress.phone}
+                    onChange={(e) => setDeliveryAddress({...deliveryAddress, phone: e.target.value})}
+                    placeholder="10-digit mobile number"
+                    maxLength={10}
+                    className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-gray-300 mb-2">
+                  <MapPin size={16} />
+                  Address Line 1 *
+                </label>
+                <input
+                  type="text"
+                  value={deliveryAddress.addressLine1}
+                  onChange={(e) => setDeliveryAddress({...deliveryAddress, addressLine1: e.target.value})}
+                  placeholder="House No., Building Name"
+                  className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-gray-300 mb-2">
+                  <MapPin size={16} />
+                  Address Line 2
+                </label>
+                <input
+                  type="text"
+                  value={deliveryAddress.addressLine2}
+                  onChange={(e) => setDeliveryAddress({...deliveryAddress, addressLine2: e.target.value})}
+                  placeholder="Road Name, Area, Colony (Optional)"
+                  className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="flex items-center gap-2 text-gray-300 mb-2">
+                    <MapPin size={16} />
+                    City *
+                  </label>
+                  <input
+                    type="text"
+                    value={deliveryAddress.city}
+                    onChange={(e) => setDeliveryAddress({...deliveryAddress, city: e.target.value})}
+                    placeholder="City"
+                    className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-gray-300 mb-2">
+                    <MapPin size={16} />
+                    State *
+                  </label>
+                  <input
+                    type="text"
+                    value={deliveryAddress.state}
+                    onChange={(e) => setDeliveryAddress({...deliveryAddress, state: e.target.value})}
+                    placeholder="State"
+                    className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-gray-300 mb-2">
+                    <MapPin size={16} />
+                    Pincode *
+                  </label>
+                  <input
+                    type="text"
+                    value={deliveryAddress.pincode}
+                    onChange={(e) => setDeliveryAddress({...deliveryAddress, pincode: e.target.value})}
+                    placeholder="6-digit pincode"
+                    maxLength={6}
+                    className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-300 mb-3 block">Address Type</label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeliveryAddress({...deliveryAddress, addressType: "home"})}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition ${
+                      deliveryAddress.addressType === "home"
+                        ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
+                        : "bg-purple-700/30 text-gray-300 hover:text-white"
+                    }`}
+                  >
+                    <Home size={18} />
+                    Home
+                  </button>
+                  <button
+                    onClick={() => setDeliveryAddress({...deliveryAddress, addressType: "work"})}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition ${
+                      deliveryAddress.addressType === "work"
+                        ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
+                        : "bg-purple-700/30 text-gray-300 hover:text-white"
+                    }`}
+                  >
+                    <Package size={18} />
+                    Work
+                  </button>
+                  <button
+                    onClick={() => setDeliveryAddress({...deliveryAddress, addressType: "other"})}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition ${
+                      deliveryAddress.addressType === "other"
+                        ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
+                        : "bg-purple-700/30 text-gray-300 hover:text-white"
+                    }`}
+                  >
+                    <MapPin size={18} />
+                    Other
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6">
+                <button
+                  onClick={() => setCurrentView("cart")}
+                  className="flex-1 py-4 bg-white/10 hover:bg-white/15 rounded-xl text-white font-semibold transition flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft size={20} />
+                  Back to Cart
+                </button>
+                <button
+                  onClick={async () => {
+                    if (validateAddress()) {
+                      // Save address to backend if it's new
+                      if (!deliveryAddress.id) {
+                        await handleSaveAddress(deliveryAddress);
+                      }
+                      handleContinueToOrder();
+                    }
+                  }}
+                  disabled={loading}
+                  className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-bold text-lg hover:shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 size={20} className="animate-spin" /> : null}
+                  Continue to Order
+                  <CreditCard size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Order Confirmation View
+  if (currentView === "orderConfirmation") {
+    return (
+      <div className="space-y-6">
+        {/* Order Confirmation Header */}
+        <div className="bg-gradient-to-r from-green-600/20 to-blue-600/20 rounded-2xl p-8 backdrop-blur-sm border border-green-500/20 shadow-xl">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setCurrentView("address")}
+              className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <CreditCard size={32} className="text-green-400" />
+                <h1 className="font-poppins font-bold text-4xl text-white">
+                  Order Summary
+                </h1>
+              </div>
+              <p className="text-gray-200 text-lg">
+                Review your order before placing
               </p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Delivery Address Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-lg">
-              <h2 className="font-poppins font-semibold text-2xl text-white mb-6 flex items-center gap-2">
-                <MapPin size={24} className="text-blue-400" />
-                Delivery Address
+          {/* Order Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Delivery Address Card */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-poppins font-semibold text-xl text-white flex items-center gap-2">
+                  <MapPin size={20} className="text-blue-400" />
+                  Delivery Address
+                </h2>
+                <button
+                  onClick={() => setCurrentView("address")}
+                  className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition text-sm"
+                >
+                  <Edit size={16} />
+                  Edit
+                </button>
+              </div>
+              <div className="bg-purple-700/20 rounded-xl p-4 border border-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  {deliveryAddress.addressType === "home" && <Home size={16} className="text-green-400" />}
+                  {deliveryAddress.addressType === "work" && <Package size={16} className="text-blue-400" />}
+                  {deliveryAddress.addressType === "other" && <MapPin size={16} className="text-purple-400" />}
+                  <span className="text-white font-medium capitalize">{deliveryAddress.addressType}</span>
+                </div>
+                <p className="text-white font-semibold">{deliveryAddress.fullName}</p>
+                <p className="text-gray-300">{deliveryAddress.addressLine1}</p>
+                {deliveryAddress.addressLine2 && <p className="text-gray-300">{deliveryAddress.addressLine2}</p>}
+                <p className="text-gray-300">{deliveryAddress.city}, {deliveryAddress.state} - {deliveryAddress.pincode}</p>
+                <p className="text-gray-400 mt-2 flex items-center gap-2">
+                  <Phone size={14} />
+                  {deliveryAddress.phone}
+                </p>
+              </div>
+            </div>
+
+            {/* Cart Items */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg">
+              <h2 className="font-poppins font-semibold text-xl text-white mb-4 flex items-center gap-2">
+                <ShoppingCart size={20} className="text-blue-400" />
+                Order Items ({cart.length})
               </h2>
-
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="flex items-center gap-2 text-gray-300 mb-2">
-                      <User size={16} />
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.fullName}
-                      onChange={(e) => setDeliveryAddress({...deliveryAddress, fullName: e.target.value})}
-                      placeholder="Enter your full name"
-                      className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
-                    />
+                {cart.map((item) => (
+                  <div key={item.id} className="flex gap-4 bg-purple-700/20 rounded-xl p-4 border border-white/5">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-white font-medium">{item.name}</h3>
+                      <p className="text-gray-400 text-sm">Qty: {item.quantity}</p>
+                      {item.requiresPrescription && (
+                        <span className="inline-flex items-center gap-1 text-xs text-yellow-400 mt-1">
+                          <Package size={12} />
+                          Prescription Required
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-green-400 font-bold">₹{item.price * item.quantity}</p>
+                      <p className="text-gray-400 text-sm">₹{item.price} each</p>
+                    </div>
                   </div>
+                ))}
+              </div>
+            </div>
 
-                  <div>
-                    <label className="flex items-center gap-2 text-gray-300 mb-2">
-                      <Phone size={16} />
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      value={deliveryAddress.phone}
-                      onChange={(e) => setDeliveryAddress({...deliveryAddress, phone: e.target.value})}
-                      placeholder="10-digit mobile number"
-                      maxLength={10}
-                      className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
-                    />
-                  </div>
+            {/* Delivery Info */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg">
+              <h2 className="font-poppins font-semibold text-xl text-white mb-4 flex items-center gap-2">
+                <Truck size={20} className="text-blue-400" />
+                Delivery Information
+              </h2>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                  <Clock size={24} className="text-green-400" />
                 </div>
-
                 <div>
-                  <label className="flex items-center gap-2 text-gray-300 mb-2">
-                    <MapPin size={16} />
-                    Address Line 1 *
-                  </label>
-                  <input
-                    type="text"
-                    value={deliveryAddress.addressLine1}
-                    onChange={(e) => setDeliveryAddress({...deliveryAddress, addressLine1: e.target.value})}
-                    placeholder="House No., Building Name"
-                    className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-gray-300 mb-2">
-                    <MapPin size={16} />
-                    Address Line 2
-                  </label>
-                  <input
-                    type="text"
-                    value={deliveryAddress.addressLine2}
-                    onChange={(e) => setDeliveryAddress({...deliveryAddress, addressLine2: e.target.value})}
-                    placeholder="Road Name, Area, Colony (Optional)"
-                    className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="flex items-center gap-2 text-gray-300 mb-2">
-                      <MapPin size={16} />
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.city}
-                      onChange={(e) => setDeliveryAddress({...deliveryAddress, city: e.target.value})}
-                      placeholder="City"
-                      className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 text-gray-300 mb-2">
-                      <MapPin size={16} />
-                      State *
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.state}
-                      onChange={(e) => setDeliveryAddress({...deliveryAddress, state: e.target.value})}
-                      placeholder="State"
-                      className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 text-gray-300 mb-2">
-                      <MapPin size={16} />
-                      Pincode *
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.pincode}
-                      onChange={(e) => setDeliveryAddress({...deliveryAddress, pincode: e.target.value})}
-                      placeholder="6-digit pincode"
-                      maxLength={6}
-                      className="w-full px-4 py-3 rounded-xl border bg-purple-700/30 border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-gray-300 mb-3 block">Address Type</label>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setDeliveryAddress({...deliveryAddress, addressType: "home"})}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition ${
-                        deliveryAddress.addressType === "home"
-                          ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
-                          : "bg-purple-700/30 text-gray-300 hover:text-white"
-                      }`}
-                    >
-                      <Home size={18} />
-                      Home
-                    </button>
-                    <button
-                      onClick={() => setDeliveryAddress({...deliveryAddress, addressType: "work"})}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition ${
-                        deliveryAddress.addressType === "work"
-                          ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
-                          : "bg-purple-700/30 text-gray-300 hover:text-white"
-                      }`}
-                    >
-                      <Package size={18} />
-                      Work
-                    </button>
-                    <button
-                      onClick={() => setDeliveryAddress({...deliveryAddress, addressType: "other"})}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition ${
-                        deliveryAddress.addressType === "other"
-                          ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg"
-                          : "bg-purple-700/30 text-gray-300 hover:text-white"
-                      }`}
-                    >
-                      <MapPin size={18} />
-                      Other
-                    </button>
-                  </div>
+                  <p className="text-white font-medium">Estimated Delivery</p>
+                  <p className="text-gray-400">2-3 business days</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Order Summary */}
+          {/* Payment Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-lg sticky top-6">
               <h2 className="font-poppins font-semibold text-xl text-white mb-4">
-                Order Summary
+                Payment Summary
               </h2>
               
-              <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-gray-300">{item.name} x{item.quantity}</span>
-                    <span className="text-white">₹{item.price * item.quantity}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-white/10 pt-4 space-y-2">
+              <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-gray-300">
-                  <span>Subtotal</span>
+                  <span>Subtotal ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
                   <span className="text-white">₹{getTotalPrice()}</span>
                 </div>
                 <div className="flex justify-between text-gray-300">
-                  <span>Delivery</span>
+                  <span>Delivery Charges</span>
                   <span className="text-green-400">
                     {getTotalPrice() >= 4000 ? 'FREE' : '₹50'}
                   </span>
                 </div>
-                <div className="border-t border-white/10 pt-2">
+                {getTotalPrice() < 4000 && (
+                  <p className="text-xs text-gray-400">
+                    Add ₹{4000 - getTotalPrice()} more for free delivery
+                  </p>
+                )}
+                <div className="border-t border-white/10 pt-3">
                   <div className="flex justify-between">
-                    <span className="text-white font-semibold text-lg">Total</span>
-                    <span className="text-green-400 font-bold text-xl">
+                    <span className="text-white font-semibold text-lg">Total Amount</span>
+                    <span className="text-green-400 font-bold text-2xl">
                       ₹{getTotalPrice() >= 4000 ? getTotalPrice() : getTotalPrice() + 50}
                     </span>
                   </div>
@@ -697,15 +1305,35 @@ const MedicationSection = () => {
 
               <button
                 onClick={handleFinalCheckout}
-                className="w-full mt-6 py-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl text-white font-bold text-lg hover:shadow-lg transition flex items-center justify-center gap-2"
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl text-white font-bold text-lg hover:shadow-lg transition flex items-center justify-center gap-2 mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Check size={24} />
-                Place Order
+                {loading ? (
+                  <Loader2 size={24} className="animate-spin" />
+                ) : (
+                  <CheckCircle size={24} />
+                )}
+                {loading ? 'Processing...' : 'Place Order'}
               </button>
 
-              <p className="text-gray-400 text-xs text-center mt-4">
+              <p className="text-gray-400 text-xs text-center">
                 By placing order, you agree to our terms and conditions
               </p>
+
+              <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
+                <div className="flex items-start gap-2 text-gray-400 text-sm">
+                  <Check size={16} className="mt-0.5 flex-shrink-0 text-green-400" />
+                  <span>Cash on Delivery available</span>
+                </div>
+                <div className="flex items-start gap-2 text-gray-400 text-sm">
+                  <Check size={16} className="mt-0.5 flex-shrink-0 text-green-400" />
+                  <span>7-day return policy</span>
+                </div>
+                <div className="flex items-start gap-2 text-gray-400 text-sm">
+                  <Check size={16} className="mt-0.5 flex-shrink-0 text-green-400" />
+                  <span>100% authentic products</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
