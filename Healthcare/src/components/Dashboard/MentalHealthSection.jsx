@@ -1003,20 +1003,6 @@ const MentalHealthSection = ({ showGame, setShowGame, defaultTab = "assessment" 
           </div>
         </div>
       )}
-
-      {activeTab === "results" && backendAssessments.length > 0 && (
-        <div className="mt-12 bg-purple-900/40 border border-purple-700 rounded-xl p-6">
-          <h3 className="text-xl font-semibold mb-4 text-white">Your Previous Assessments (Backend)</h3>
-          <ul>
-            {backendAssessments.map(a => (
-              <li key={a.id} className="mb-2 p-2 border border-purple-600 rounded bg-purple-800/40 text-white">
-                <div>Score: {a.score}</div>
-                <div>Date: {new Date(a.created_at).toLocaleString()}</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 };

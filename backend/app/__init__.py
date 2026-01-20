@@ -58,6 +58,7 @@ def create_app():
     from app.routes.cart_routes import cart_bp
     from app.routes.order_routes import order_bp
     from app.routes.address_routes import address_bp
+    from app.routes.profile_routes import profile_bp
     from app.routes.assessment_routes import assessment_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(doctor_bp)
@@ -67,6 +68,7 @@ def create_app():
     app.register_blueprint(cart_bp)
     app.register_blueprint(order_bp)
     app.register_blueprint(address_bp)
+    app.register_blueprint(profile_bp)
     app.register_blueprint(assessment_bp)
     
     return app

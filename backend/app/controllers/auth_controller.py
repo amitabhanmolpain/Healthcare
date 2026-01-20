@@ -1,5 +1,6 @@
 from app import bcrypt 
 from app.models.user_models import User 
+from app.models.profile_model import UserProfile, PersonalInfo, EmergencyContact
 from flask_jwt_extended import create_access_token
 from datetime import datetime, timedelta 
 
@@ -46,9 +47,9 @@ def _increment_failed_attempts(user):
     user.save()    
 
 def register_user(data):
-    required = ["name","email","password"]
+    required = ["name","email","password","phone","gender","dob","address","emergency_contact_name","emergency_contact_phone"]
     if not all(data.get(field) for field in required):
-        return {"message": "Name,email, and password are required"},400
+        return {"message": "All profile fields are required"},400
 
     email = data["email"].lower().strip()
 
@@ -63,14 +64,26 @@ def register_user(data):
         email = email,
         password = hashed_password,
     )    
-
-
     user.save()
+
+    # Create UserProfile with personal info
+    emergency_contact = EmergencyContact(name=data["emergency_contact_name"], phone=data["emergency_contact_phone"])
+    personal_info = PersonalInfo(
+        full_name=data["name"],
+        email=email,
+        phone=data["phone"],
+        gender=data["gender"],
+        dob=data["dob"],
+        address=data["address"],
+        emergency_contact=emergency_contact
+    )
+    profile = UserProfile(user_id=str(user.id), personal_info=personal_info)
+    profile.save()
 
     token = create_access_token(identity=str(user.id), additional_claims={"email": user.email, "name": user.name})
 
     return {
-        "message": "User registerd successfully",
+        "message": "User registered successfully",
         "token": token,
         "user": _serialize_user(user),
     }, 201 

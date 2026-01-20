@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import toast from 'react-hot-toast';
 import { authAPI } from "../../services/api";
+import { profileAPI } from '../../services/profileApi';
 import { 
   User, 
   Mail, 
@@ -21,6 +22,7 @@ import {
 const ProfileSection = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
+  const [loading, setLoading] = useState(false);
   
   // Get user from localStorage if not passed as prop
   const currentUser = user || authAPI.getCurrentUser();
@@ -54,9 +56,90 @@ const ProfileSection = ({ user }) => {
     }
   }, [currentUser]);
 
-  const handleSave = () => {
+  // Fetch profile data from backend
+  useEffect(() => {
+    fetchProfileData(activeTab);
+    // eslint-disable-next-line
+  }, [activeTab]);
+
+  const fetchProfileData = async (tab) => {
+    setLoading(true);
+    try {
+      if (tab === 'personal') {
+        const data = await profileAPI.getPersonalInfo();
+        setProfileData({
+          name: data.personal_info.full_name || '',
+          email: data.personal_info.email || '',
+          phone: data.personal_info.phone || '',
+          dateOfBirth: data.personal_info.dob ? data.personal_info.dob.substring(0,10) : '',
+          gender: data.personal_info.gender || '',
+          address: data.personal_info.address || '',
+          emergencyContact: data.personal_info.emergency_contact?.phone || '',
+          emergencyName: data.personal_info.emergency_contact?.name || ''
+        });
+      } else if (tab === 'medical') {
+        const data = await profileAPI.getMedicalHistory();
+        setProfileData(prev => ({
+          ...prev,
+          bloodType: data.medical_history.blood_type || '',
+          height: data.medical_history.height || '',
+          weight: data.medical_history.weight || '',
+          lastCheckup: data.medical_history.last_checkup ? data.medical_history.last_checkup.substring(0,10) : '',
+          allergies: (data.medical_history.allergies || []).join(', '),
+          chronicConditions: (data.medical_history.chronic_conditions || []).join(', '),
+          currentMedications: (data.medical_history.medications || []).join(', ')
+        }));
+      } else if (tab === 'security') {
+        const data = await profileAPI.getSecuritySettings();
+        setProfileData(prev => ({
+          ...prev,
+          twoFactorEnabled: data.security_settings.two_factor_enabled || false
+        }));
+      }
+    } catch (err) {
+      toast.error('Failed to fetch profile data');
+    }
+    setLoading(false);
+  };
+
+  // Save changes to backend
+  const handleSave = async () => {
     setIsEditing(false);
-    toast.success('Profile updated successfully');
+    setLoading(true);
+    try {
+      if (activeTab === 'personal') {
+        await profileAPI.updatePersonalInfo({
+          full_name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          dob: profileData.dateOfBirth,
+          gender: profileData.gender,
+          address: profileData.address,
+          emergency_contact: {
+            name: profileData.emergencyName,
+            phone: profileData.emergencyContact
+          }
+        });
+      } else if (activeTab === 'medical') {
+        await profileAPI.updateMedicalHistory({
+          blood_type: profileData.bloodType,
+          height: profileData.height,
+          weight: profileData.weight,
+          last_checkup: profileData.lastCheckup,
+          allergies: profileData.allergies.split(',').map(s => s.trim()),
+          chronic_conditions: profileData.chronicConditions.split(',').map(s => s.trim()),
+          medications: profileData.currentMedications.split(',').map(s => s.trim())
+        });
+      } else if (activeTab === 'security') {
+        await profileAPI.updateSecuritySettings({
+          two_factor_enabled: profileData.twoFactorEnabled
+        });
+      }
+      toast.success('Profile updated successfully');
+    } catch (err) {
+      toast.error('Failed to update profile');
+    }
+    setLoading(false);
   };
 
   const handleInputChange = (field, value) => {
