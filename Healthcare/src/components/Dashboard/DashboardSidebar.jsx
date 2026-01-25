@@ -15,6 +15,18 @@ import {
 
 const DashboardSidebar = ({ activeSection, setActiveSection, onLogout, onBackToHome, user }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Debounce for section change
+  const [lastClick, setLastClick] = useState(0);
+
+  const DEBOUNCE_MS = 200;
+
+  const handleSectionClick = (id) => {
+    const now = Date.now();
+    if (now - lastClick < DEBOUNCE_MS) return;
+    setLastClick(now);
+    setActiveSection(id);
+    setIsMobileMenuOpen(false);
+  };
 
   const menuItems = [
     { id: "home", label: "Dashboard", icon: Home },
@@ -60,10 +72,7 @@ const DashboardSidebar = ({ activeSection, setActiveSection, onLogout, onBackToH
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => {
-                    setActiveSection(item.id);
-                    setIsMobileMenuOpen(false);
-                  }}
+                  onClick={() => handleSectionClick(item.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                     activeSection === item.id
                       ? "bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg scale-105"

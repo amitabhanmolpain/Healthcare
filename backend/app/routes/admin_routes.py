@@ -12,7 +12,7 @@ from app.controllers.admin_controller import (
 )
 import traceback
 
-admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 api = Api(admin_bp)
 
 def admin_required():

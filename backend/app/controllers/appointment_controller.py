@@ -244,15 +244,26 @@ def get_upcoming_appointments(user_id, days=30):
 
 def _serialize_appointment(appointment):
     """Helper function to serialize appointment data"""
+    try:
+        doctor = appointment.doctor
+        doctor_data = {
+            "id": doctor.doctor_id,
+            "name": doctor.name,
+            "specialty": doctor.specialty,
+            "image": doctor.img,
+            "consultation_fee": doctor.consultation_fee
+        } if doctor else None
+    except Exception:
+        doctor_data = {
+            "id": None,
+            "name": "Unknown Doctor",
+            "specialty": "",
+            "image": None,
+            "consultation_fee": None
+        }
     return {
         "id": str(appointment.id),
-        "doctor": {
-            "id": appointment.doctor.doctor_id,
-            "name": appointment.doctor.name,
-            "specialty": appointment.doctor.specialty,
-            "img": appointment.doctor.img,
-            "consultation_fee": appointment.doctor.consultation_fee
-        },
+        "doctor": doctor_data,
         "appointment_date": appointment.appointment_date.strftime("%Y-%m-%d"),
         "appointment_time": appointment.appointment_time,
         "reason": appointment.reason,

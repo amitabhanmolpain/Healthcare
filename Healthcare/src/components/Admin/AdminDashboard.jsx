@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -30,6 +30,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [admin, setAdmin] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [appointmentFilter, setAppointmentFilter] = useState('new'); // 'new' or 'old'
 
   useEffect(() => {
     // Check if admin is logged in
@@ -390,13 +391,21 @@ const AdminDashboard = () => {
                         <td className="p-3">
                           <div className="flex items-center gap-3">
                             <img
-                              src={apt.doctor?.image || 'https://via.placeholder.com/40'}
-                              alt={apt.doctor?.name}
+                              src={
+                                (apt.doctor && (apt.doctor.image || apt.doctor.img))
+                                  || (apt.doctor_image)
+                                  || 'https://via.placeholder.com/40'
+                              }
+                              alt={apt.doctor?.name || apt.doctor_id || 'Unknown Doctor'}
                               className="w-10 h-10 rounded-full object-cover border-2 border-purple-500"
                             />
                             <div>
-                              <p className="text-white font-medium">{apt.doctor?.name}</p>
-                              <p className="text-gray-400 text-xs">{apt.doctor?.specialty}</p>
+                              <p className="text-white font-medium">
+                                {apt.doctor?.name || apt.doctor_name || apt.doctor_id || 'Unknown Doctor'}
+                              </p>
+                              <p className="text-gray-400 text-xs">
+                                {apt.doctor?.specialty || ''}
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -467,45 +476,41 @@ const AdminDashboard = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {doctors.map((doctor) => (
-                  <div key={doctor.id} className="bg-white/5 rounded-xl p-5 border border-white/10 hover:border-white/20 transition">
-                    <div className="flex items-start gap-4 mb-4">
-                      <img
-                        src={doctor.image || 'https://via.placeholder.com/80'}
-                        alt={doctor.name}
-                        className="w-20 h-20 rounded-full object-cover border-2 border-purple-500"
-                        onError={(e) => { e.target.src = 'https://via.placeholder.com/80'; }}
-                      />
-                      <div className="flex-1">
-                        <h3 className="text-white font-semibold text-lg">{doctor.name}</h3>
-                        <p className="text-purple-400 text-sm mb-1">{doctor.specialty}</p>
-                        <p className="text-gray-400 text-xs">{doctor.experience} years exp</p>
-                      </div>
+                  <div key={doctor.id} className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col items-center text-center p-6">
+                    <img
+                      src={doctor.image || 'https://via.placeholder.com/120'}
+                      alt={doctor.name}
+                      className="w-24 h-24 rounded-lg object-cover border-2 border-purple-400 shadow mb-4 bg-white mx-auto"
+                      onError={(e) => { e.target.src = 'https://via.placeholder.com/120'; }}
+                    />
+                    <h3 className="text-white font-bold text-lg mb-1">{doctor.name}</h3>
+                    <div className="flex flex-wrap justify-center gap-2 mb-2">
+                      <span className="bg-blue-500/20 text-blue-300 text-xs font-semibold px-3 py-1 rounded-full">{doctor.specialty}</span>
+                      <span className={`text-xs font-semibold px-3 py-1 rounded-full ${doctor.is_active ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'}`}>{doctor.is_active ? 'Available' : 'Offline'}</span>
                     </div>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-300 text-sm">Status:</span>
-                        <button
-                          onClick={() => toggleDoctorStatus(doctor.id, doctor.is_active)}
-                          className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
-                            doctor.is_active
-                              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                              : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
-                          }`}
-                        >
-                          {doctor.is_active ? '✓ Active' : '○ Offline'}
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-300">Rating:</span>
-                        <span className="text-yellow-400">⭐ {doctor.rating || '4.5'}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-300">Fee:</span>
-                        <span className="text-green-400 font-semibold">₹{doctor.consultation_fee}</span>
-                      </div>
+                    <div className="flex flex-wrap justify-center gap-2 mb-2">
+                      {doctor.qualifications && doctor.qualifications.map((q, i) => (
+                        <span key={i} className="bg-white/10 text-purple-200 text-xs px-2 py-0.5 rounded-full">{q}</span>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2 mb-2">
+                      <span className="flex items-center gap-1 text-yellow-400 text-sm font-semibold bg-yellow-400/10 px-2 py-1 rounded-full"><svg xmlns='http://www.w3.org/2000/svg' className='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.036 6.29a1 1 0 00.95.69h6.6c.969 0 1.371 1.24.588 1.81l-5.347 3.89a1 1 0 00-.364 1.118l2.036 6.29c.3.921-.755 1.688-1.538 1.118l-5.347-3.89a1 1 0 00-1.176 0l-5.347 3.89c-.783.57-1.838-.197-1.538-1.118l2.036-6.29a1 1 0 00-.364-1.118l-5.347-3.89c-.783-.57-.38-1.81.588-1.81h6.6a1 1 0 00.95-.69l2.036-6.29z' /></svg>{doctor.rating || '4.5'}</span>
+                      <span className="flex items-center gap-1 text-green-400 text-sm font-semibold bg-green-400/10 px-2 py-1 rounded-full">₹{doctor.consultation_fee}</span>
+                      <span className="bg-purple-500/20 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full">{doctor.experience} yrs</span>
+                    </div>
+                    <p className="text-gray-300 text-xs mb-4 min-h-[40px]">{doctor.about}</p>
+                    <div className="flex items-center justify-center gap-2 mt-auto">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={doctor.is_active}
+                          onChange={() => toggleDoctorStatus(doctor.id, doctor.is_active)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer dark:bg-gray-700 peer-checked:bg-green-500 transition-all duration-300"></div>
+                        <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow-md transition-transform duration-300 peer-checked:translate-x-5"></div>
+                      </label>
+                      <span className={`text-xs font-medium ${doctor.is_active ? 'text-green-400' : 'text-gray-400'}`}>{doctor.is_active ? 'Available' : 'Offline'}</span>
                     </div>
                   </div>
                 ))}
@@ -517,83 +522,144 @@ const AdminDashboard = () => {
         {/* Appointments View */}
         {activeTab === 'appointments' && (
           <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-            <h2 className="text-white font-bold text-xl mb-4">All Appointments</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left text-gray-300 font-medium p-3">Patient</th>
-                    <th className="text-left text-gray-300 font-medium p-3">Doctor</th>
-                    <th className="text-left text-gray-300 font-medium p-3">Date</th>
-                    <th className="text-left text-gray-300 font-medium p-3">Time</th>
-                    <th className="text-left text-gray-300 font-medium p-3">Type</th>
-                    <th className="text-left text-gray-300 font-medium p-3">Status</th>
-                    <th className="text-left text-gray-300 font-medium p-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {appointments.map((apt) => (
-                    <tr key={apt.id} className="border-b border-white/5">
-                      <td className="text-white p-3">{apt.user?.name}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={apt.doctor?.image || 'https://via.placeholder.com/40'}
-                            alt={apt.doctor?.name}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-purple-500"
-                          />
-                          <div>
-                            <p className="text-white font-medium">{apt.doctor?.name}</p>
-                            <p className="text-gray-400 text-xs">{apt.doctor?.specialty}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="text-gray-300 p-3">{apt.appointment_date}</td>
-                      <td className="text-gray-300 p-3">{apt.appointment_time}</td>
-                      <td className="text-gray-300 p-3">{apt.consultation_type}</td>
-                      <td className="p-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          apt.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
-                          apt.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                          apt.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {apt.status}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex gap-2">
-                          {apt.status !== 'confirmed' && (
-                            <button
-                              onClick={() => updateAppointmentStatus(apt.id, 'confirmed')}
-                              className="px-3 py-1 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium transition"
-                            >
-                              Confirm
-                            </button>
-                          )}
-                          {apt.status !== 'pending' && (
-                            <button
-                              onClick={() => updateAppointmentStatus(apt.id, 'pending')}
-                              className="px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 text-xs font-medium transition"
-                            >
-                              Pending
-                            </button>
-                          )}
-                          {apt.status !== 'cancelled' && (
-                            <button
-                              onClick={() => updateAppointmentStatus(apt.id, 'cancelled')}
-                              className="px-3 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-medium transition"
-                            >
-                              Reject
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-white font-bold text-xl">Appointment Management</h2>
+              <div className="flex items-center gap-4">
+                <div className="flex bg-white/10 rounded-lg p-1">
+                  <button
+                    onClick={() => setAppointmentFilter('new')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                      appointmentFilter === 'new'
+                        ? 'bg-purple-500 text-white'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    New Requests
+                  </button>
+                  <button
+                    onClick={() => setAppointmentFilter('old')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                      appointmentFilter === 'old'
+                        ? 'bg-purple-500 text-white'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    Past Requests
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {(() => {
+              const filteredAppointments = appointments.filter(apt => {
+                const appointmentDate = new Date(apt.appointment_date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (appointmentFilter === 'new') {
+                  // New: pending status or future dates
+                  return apt.status === 'pending' || appointmentDate >= today;
+                } else {
+                  // Old: confirmed/cancelled or past dates
+                  return apt.status === 'confirmed' || apt.status === 'cancelled' || appointmentDate < today;
+                }
+              });
+
+              return (
+                <>
+                  <div className="mb-4">
+                    <p className="text-gray-300 text-sm">
+                      Showing {filteredAppointments.length} {appointmentFilter === 'new' ? 'new' : 'past'} appointment{filteredAppointments.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          <th className="text-left text-gray-300 font-medium p-3">Patient</th>
+                          <th className="text-left text-gray-300 font-medium p-3">Doctor</th>
+                          <th className="text-left text-gray-300 font-medium p-3">Date</th>
+                          <th className="text-left text-gray-300 font-medium p-3">Time</th>
+                          <th className="text-left text-gray-300 font-medium p-3">Type</th>
+                          <th className="text-left text-gray-300 font-medium p-3">Status</th>
+                          <th className="text-left text-gray-300 font-medium p-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAppointments.map((apt) => {
+                          const isPastAppointment = new Date(apt.appointment_date) < new Date();
+                          const canModify = appointmentFilter === 'new' && !isPastAppointment;
+                          
+                          return (
+                            <tr key={apt.id} className="border-b border-white/5">
+                              <td className="text-white p-3">{apt.user?.name}</td>
+                              <td className="p-3">
+                                <div className="flex items-center gap-3">
+                                  <img
+                                    src={apt.doctor?.image || 'https://via.placeholder.com/40'}
+                                    alt={apt.doctor?.name}
+                                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-500"
+                                  />
+                                  <div>
+                                    <p className="text-white font-medium">{apt.doctor?.name}</p>
+                                    <p className="text-gray-400 text-xs">{apt.doctor?.specialty}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="text-gray-300 p-3">{apt.appointment_date}</td>
+                              <td className="text-gray-300 p-3">{apt.appointment_time}</td>
+                              <td className="text-gray-300 p-3">{apt.consultation_type}</td>
+                              <td className="p-3">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  apt.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
+                                  apt.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  apt.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                  'bg-blue-500/20 text-blue-400'
+                                }`}>
+                                  {apt.status}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <div className="flex gap-2">
+                                  {canModify && apt.status !== 'confirmed' && (
+                                    <button
+                                      onClick={() => updateAppointmentStatus(apt.id, 'confirmed')}
+                                      className="px-3 py-1 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium transition"
+                                    >
+                                      Accept
+                                    </button>
+                                  )}
+                                  {canModify && apt.status !== 'pending' && (
+                                    <button
+                                      onClick={() => updateAppointmentStatus(apt.id, 'pending')}
+                                      className="px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 text-xs font-medium transition"
+                                    >
+                                      Pending
+                                    </button>
+                                  )}
+                                  {canModify && apt.status !== 'cancelled' && (
+                                    <button
+                                      onClick={() => updateAppointmentStatus(apt.id, 'cancelled')}
+                                      className="px-3 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-medium transition"
+                                    >
+                                      Reject
+                                    </button>
+                                  )}
+                                  {!canModify && (
+                                    <span className="text-gray-500 text-xs">No actions available</span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
