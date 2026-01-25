@@ -1021,7 +1021,9 @@ import { statsAPI } from "../../services/statsApi";
 
 const LeaderboardSection = () => {
   const [stats, setStats] = useState({});
+  const [games, setGames] = useState({});
   const [loading, setLoading] = useState(true);
+  const [achievements, setAchievements] = useState([]);
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
@@ -1032,9 +1034,13 @@ const LeaderboardSection = () => {
       try {
         const data = await statsAPI.getStats();
         setStats(data?.global_stats || {});
+        setGames(data?.games || {});
+        setAchievements(data?.achievements || []);
       } catch (e) {
         console.error("Stats API error:", e);
         setStats({});
+        setGames({});
+        setAchievements([]);
       } finally {
         setLoading(false);
       }
@@ -1053,11 +1059,37 @@ const LeaderboardSection = () => {
   const daysInMonth = getDaysInMonth(month.year, month.month);
 
   // hooks ALWAYS run
+  // Build activity map from real data
   const activityMap = useMemo(() => {
+    // Assume stats or games has a 'activity_log' or similar array of dates played (YYYY-MM-DD)
+    // If not, fallback to victories/losses per day if available
+    // For now, use a simple approach: if any game has a victory/loss on a date, mark as played
     const map = {};
-    for (let d = 1; d <= daysInMonth; d++) map[d] = d % 2 === 0;
+    // Try to get activity log from stats or games
+    let activityLog = [];
+    if (stats && stats.activity_log) {
+      activityLog = stats.activity_log;
+    } else if (games) {
+      // Aggregate all games' activity logs if present
+      Object.values(games).forEach(g => {
+        if (g && Array.isArray(g.activity_log)) {
+          activityLog = activityLog.concat(g.activity_log);
+        }
+      });
+    }
+    // Convert to set of YYYY-MM-DD strings
+    const playedSet = new Set(activityLog.map(date => {
+      if (typeof date === 'string') return date;
+      if (date && date.date) return date.date;
+      return '';
+    }));
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(month.year, month.month, d);
+      const dateStr = dateObj.toISOString().slice(0, 10);
+      map[d] = playedSet.has(dateStr);
+    }
     return map;
-  }, [daysInMonth]);
+  }, [daysInMonth, month, stats, games]);
 
   const calendarDays = useMemo(() => {
     const list = [];
@@ -1090,8 +1122,6 @@ const LeaderboardSection = () => {
       ? stats.highest_streak
       : streak;
 
-  const badges = Array.isArray(stats.badges) ? stats.badges : [];
-
   const xpProgress = xp % 100;
   const xpToNextLevel = level * 100 - xp;
   const totalBattles = victories + losses;
@@ -1101,17 +1131,23 @@ const LeaderboardSection = () => {
     return <div className="text-white">Loading leaderboard...</div>;
 
   return (
+
     <div className="space-y-6">
-      {/* Top Stats Card - Level & XP */}
-      <div className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/30 rounded-2xl p-8">
+      {/* Top Stats Card - Combined Level & XP */}
+      <div className="bg-gradient-to-r from-red-500/20 via-green-500/20 to-blue-600/20 border border-yellow-500/30 rounded-2xl p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
-              <Trophy size={40} className="text-white" />
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-400 via-green-400 to-blue-400 flex items-center justify-center shadow-lg">
+              {/* Combination icon: 3 game icons */}
+              <div className="flex flex-col items-center">
+                <span className="text-2xl mb-1">⚔️</span>
+                <span className="text-2xl mb-1">🌟</span>
+                <span className="text-2xl">🎭</span>
+              </div>
             </div>
             <div>
-              <h2 className="font-poppins font-bold text-4xl text-white">Level {level}</h2>
-              <p className="text-gray-300">Mind Warrior</p>
+              <h2 className="font-poppins font-bold text-4xl text-white">Combined Level {level}</h2>
+              <p className="text-gray-300">This level bar is a combination of all three games' levels</p>
             </div>
           </div>
           <div className="text-right">
@@ -1123,16 +1159,16 @@ const LeaderboardSection = () => {
         {/* XP Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-300">Progress to Level {level + 1}</span>
+            <span className="text-gray-300">Progress to Level {level + 1} (Combined)</span>
             <span className="text-yellow-400 font-semibold">{xpProgress} / 100 XP</span>
           </div>
           <div className="w-full bg-purple-700/30 rounded-full h-3">
             <div 
-              className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-red-400 via-green-400 to-blue-400 h-3 rounded-full transition-all duration-500"
               style={{ width: `${xpProgress}%` }}
             ></div>
           </div>
-          <p className="text-gray-400 text-xs">{xpToNextLevel} XP needed for next level</p>
+          <p className="text-gray-400 text-xs">{xpToNextLevel} XP needed for next level (sum of all games)</p>
         </div>
       </div>
 
@@ -1226,31 +1262,290 @@ const LeaderboardSection = () => {
         </div>
       </div>
 
-      {/* Badges Section */}
+      {/* Game Levels Scoreboard */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <Target size={32} className="text-green-400" />
+          <h3 className="font-poppins font-semibold text-2xl text-white">Game Levels Scoreboard</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Thought Battle */}
+          <div className="bg-gradient-to-br from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-xl p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-400 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">⚔️</span>
+            </div>
+            <h4 className="text-white font-bold text-xl mb-2">Thought Battle</h4>
+            <div className="space-y-2">
+              <p className="text-gray-300 text-sm">Level</p>
+              <p className="text-white font-bold text-4xl">{games.thoughtbattle?.level || 1}</p>
+              <p className="text-gray-400 text-sm">XP: {games.thoughtbattle?.xp || 0}</p>
+              <p className="text-gray-400 text-sm">Wins: {games.thoughtbattle?.victories || 0}</p>
+            </div>
+          </div>
+
+          {/* Life Quest */}
+          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-xl p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">🌟</span>
+            </div>
+            <h4 className="text-white font-bold text-xl mb-2">Life Quest</h4>
+            <div className="space-y-2">
+              <p className="text-gray-300 text-sm">Level</p>
+              <p className="text-white font-bold text-4xl">{games.lifequest?.level || 1}</p>
+              <p className="text-gray-400 text-sm">XP: {games.lifequest?.xp || 0}</p>
+              <p className="text-gray-400 text-sm">Wins: {games.lifequest?.victories || 0}</p>
+            </div>
+          </div>
+
+          {/* Emotion Quest */}
+          <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">🎭</span>
+            </div>
+            <h4 className="text-white font-bold text-xl mb-2">Emotion Quest</h4>
+            <div className="space-y-2">
+              <p className="text-gray-300 text-sm">Level</p>
+              <p className="text-white font-bold text-4xl">{games.emotionquest?.level || 1}</p>
+              <p className="text-gray-400 text-sm">XP: {games.emotionquest?.xp || 0}</p>
+              <p className="text-gray-400 text-sm">Wins: {games.emotionquest?.victories || 0}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Achievements Section in Leaderboard */}
       <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-lg">
         <div className="flex items-center gap-3 mb-6">
           <Award size={32} className="text-purple-400" />
-          <h3 className="font-poppins font-semibold text-2xl text-white">Achievements & Badges</h3>
+          <h3 className="font-poppins font-semibold text-2xl text-white">Achievements Unlocked</h3>
         </div>
 
-        {badges.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {badges.map((badge, idx) => (
-              <div
-                key={idx}
-                className="bg-gradient-to-br from-purple-600/30 to-pink-600/30 border border-purple-500/50 rounded-xl p-4 text-center hover:scale-105 transition"
-              >
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-3 shadow-lg">
-                  <Trophy size={32} className="text-white" />
-                </div>
-                <p className="text-white font-semibold text-sm">{badge}</p>
-              </div>
-            ))}
+        {achievements.length > 0 ? (
+          <div className="space-y-6">
+            {/* Group achievements by game */}
+            {(() => {
+              const gameGroups = achievements.reduce((groups, achievement) => {
+                const game = achievement.game || 'global';
+                if (!groups[game]) groups[game] = [];
+                groups[game].push(achievement);
+                return groups;
+              }, {});
+
+              const gameDisplayNames = {
+                'global': '🏆 Global Achievements',
+                'thoughtbattle': '⚔️ Thought Battle',
+                'lifequest': '🌟 Life Quest',
+                'emotionquest': '🎭 Emotion Quest'
+              };
+
+              return Object.entries(gameGroups).map(([gameKey, gameAchievements]) => {
+                // Unique badge icons and badge shapes for each game
+                const badgeIcons = {
+                  thoughtbattle: (
+                    <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                      {/* Target with arrow for Thought Battle */}
+                      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                        <circle cx="32" cy="32" r="30" fill="#FF6B6B" stroke="#fff" strokeWidth="4"/>
+                        <circle cx="32" cy="32" r="18" fill="#fff" stroke="#FFD93D" strokeWidth="3"/>
+                        <path d="M44 20L32 32" stroke="#6366F1" strokeWidth="3" strokeLinecap="round"/>
+                        <polygon points="44,20 40,22 42,24" fill="#6366F1"/>
+                        <text x="32" y="58" textAnchor="middle" fontSize="12" fill="#fff" fontWeight="bold">Thought Battle</text>
+                      </svg>
+                    </div>
+                  ),
+                  lifequest: (
+                    <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                      {/* Star badge for Life Quest (fixed SVG) */}
+                      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                        <polygon points="32,10 39,26 58,26 42,38 48,54 32,45 16,54 22,38 6,26 25,26" fill="#43E97B" stroke="#fff" strokeWidth="3"/>
+                        <circle cx="32" cy="34" r="10" fill="#fff" stroke="#38BDF8" strokeWidth="2"/>
+                        <text x="32" y="39" textAnchor="middle" fontSize="14" fill="#38BDF8" fontWeight="bold">LQ</text>
+                        <text x="32" y="60" textAnchor="middle" fontSize="12" fill="#fff" fontWeight="bold">Life Quest</text>
+                      </svg>
+                    </div>
+                  ),
+                  emotionquest: (
+                    <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                      {/* Mask badge for Emotion Quest */}
+                      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                        <ellipse cx="32" cy="32" rx="28" ry="24" fill="#7C3AED" stroke="#fff" strokeWidth="4"/>
+                        <ellipse cx="32" cy="32" rx="14" ry="10" fill="#fff" stroke="#F472B6" strokeWidth="2"/>
+                        <ellipse cx="26" cy="32" rx="2" ry="3" fill="#7C3AED"/>
+                        <ellipse cx="38" cy="32" rx="2" ry="3" fill="#7C3AED"/>
+                        <path d="M28 38 Q32 42 36 38" stroke="#F472B6" strokeWidth="2" fill="none"/>
+                        <text x="32" y="58" textAnchor="middle" fontSize="12" fill="#fff" fontWeight="bold">Emotion Quest</text>
+                      </svg>
+                    </div>
+                  ),
+                  global: (
+                    <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                      {/* Trophy for global */}
+                      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                        <circle cx="32" cy="32" r="30" fill="#FBBF24" stroke="#fff" strokeWidth="4"/>
+                        <rect x="22" y="22" width="20" height="20" rx="4" fill="#fff" stroke="#6366F1" strokeWidth="2"/>
+                        <circle cx="32" cy="32" r="6" fill="#6366F1"/>
+                        <text x="32" y="58" textAnchor="middle" fontSize="12" fill="#fff" fontWeight="bold">Global</text>
+                      </svg>
+                    </div>
+                  )
+                };
+
+                const getGameStyles = (game) => {
+                  switch(game) {
+                    case 'thoughtbattle':
+                      return {
+                        bg: 'bg-gradient-to-br from-red-600/30 to-orange-600/30',
+                        border: 'border-red-500/50',
+                        icon: badgeIcons.thoughtbattle
+                      };
+                    case 'lifequest':
+                      return {
+                        bg: 'bg-gradient-to-br from-green-600/30 to-emerald-600/30',
+                        border: 'border-green-500/50',
+                        icon: badgeIcons.lifequest
+                      };
+                    case 'emotionquest':
+                      return {
+                        bg: 'bg-gradient-to-br from-blue-600/30 to-purple-600/30',
+                        border: 'border-blue-500/50',
+                        icon: badgeIcons.emotionquest
+                      };
+                    default: // global
+                      return {
+                        bg: 'bg-gradient-to-br from-purple-600/30 to-pink-600/30',
+                        border: 'border-purple-500/50',
+                        icon: badgeIcons.global
+                      };
+                  }
+                };
+
+                const styles = getGameStyles(gameKey);
+
+                return (
+                  <div key={gameKey} className="space-y-4">
+                    <h4 className="text-white font-semibold text-lg flex items-center gap-2">
+                      {gameDisplayNames[gameKey] || gameKey}
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {gameAchievements.map((achievement, idx) => (
+                        <div
+                          key={idx}
+                          className={`${styles.bg} border ${styles.border} rounded-xl p-4 text-center hover:scale-105 transition`}
+                        >
+                          {styles.icon}
+                          <p className="text-white font-semibold text-sm mt-2">{achievement.title}</p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            {new Date(achievement.earned_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         ) : (
           <div className="text-center py-8">
             <Trophy size={48} className="text-gray-500 mx-auto mb-3" />
-            <p className="text-gray-400">No badges earned yet. Keep playing to unlock achievements!</p>
+            <p className="text-gray-400">No achievements earned yet. Keep playing games to unlock them!</p>
+          </div>
+        )}
+      </div>
+
+{/* Achievements Section */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <Award size={32} className="text-purple-400" />
+          <h3 className="font-poppins font-semibold text-2xl text-white">Achievements Unlocked</h3>
+        </div>
+
+        {achievements.length > 0 ? (
+          <div className="space-y-6">
+            {/* Group achievements by game */}
+            {(() => {
+              const gameGroups = achievements.reduce((groups, achievement) => {
+                const game = achievement.game || 'global';
+                if (!groups[game]) groups[game] = [];
+                groups[game].push(achievement);
+                return groups;
+              }, {});
+
+              const gameDisplayNames = {
+                'global': '🏆 Global Achievements',
+                'thoughtbattle': '⚔️ Thought Battle',
+                'lifequest': '🌟 Life Quest',
+                'emotionquest': '🎭 Emotion Quest'
+              };
+
+              return Object.entries(gameGroups).map(([gameKey, gameAchievements]) => {
+                const getGameStyles = (game) => {
+                  switch(game) {
+                    case 'thoughtbattle':
+                      return {
+                        bg: 'bg-gradient-to-br from-red-600/30 to-orange-600/30',
+                        border: 'border-red-500/50',
+                        iconBg: 'from-red-400 to-orange-500',
+                        icon: '⚔️'
+                      };
+                    case 'lifequest':
+                      return {
+                        bg: 'bg-gradient-to-br from-green-600/30 to-emerald-600/30',
+                        border: 'border-green-500/50',
+                        iconBg: 'from-green-400 to-emerald-500',
+                        icon: '🌟'
+                      };
+                    case 'emotionquest':
+                      return {
+                        bg: 'bg-gradient-to-br from-blue-600/30 to-purple-600/30',
+                        border: 'border-blue-500/50',
+                        iconBg: 'from-blue-400 to-purple-500',
+                        icon: '🎭'
+                      };
+                    default: // global
+                      return {
+                        bg: 'bg-gradient-to-br from-purple-600/30 to-pink-600/30',
+                        border: 'border-purple-500/50',
+                        iconBg: 'from-yellow-400 to-orange-500',
+                        icon: '🏆'
+                      };
+                  }
+                };
+
+                const styles = getGameStyles(gameKey);
+
+                return (
+                  <div key={gameKey} className="space-y-4">
+                    <h4 className="text-white font-semibold text-lg flex items-center gap-2">
+                      <span className="text-2xl">{styles.icon}</span>
+                      {gameDisplayNames[gameKey] || gameKey}
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {gameAchievements.map((achievement, idx) => (
+                        <div
+                          key={idx}
+                          className={`${styles.bg} border ${styles.border} rounded-xl p-4 text-center hover:scale-105 transition`}
+                        >
+                          <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${styles.iconBg} flex items-center justify-center mx-auto mb-3 shadow-lg`}>
+                            <Trophy size={32} className="text-white" />
+                          </div>
+                          <p className="text-white font-semibold text-sm">{achievement.title}</p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            {new Date(achievement.earned_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Trophy size={48} className="text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-400">No achievements earned yet. Keep playing games to unlock them!</p>
           </div>
         )}
       </div>
