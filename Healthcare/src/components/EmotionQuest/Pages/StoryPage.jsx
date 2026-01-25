@@ -64,30 +64,26 @@ const StoryPage = ({ onNavigate }) => {
   const currentSceneData = chapterData.scenes[sceneIndex];
   const isLastScene = sceneIndex === chapterData.scenes.length - 1;
 
-  const handleChoiceSelect = (choice) => {
+  const handleChoiceSelect = async (choice) => {
     if (isChoiceDisabled) return;
 
     setSelectedChoice(choice);
     setIsChoiceDisabled(true);
     setShowFeedback(true);
-    
     // Play sound based on correctness
     if (choice.correct) {
       soundManager.playCorrect();
     } else {
       soundManager.playIncorrect();
     }
-    
     // Record the choice
     recordChoice(choice.correct);
-    
     // Track if perfect score
     if (!choice.correct) {
       setPerfectScore(false);
     }
-    
-    // Add XP
-    addXP(choice.xp);
+    // Add XP and await backend update
+    await addXP(choice.xp);
     soundManager.playXPGain();
   };
 

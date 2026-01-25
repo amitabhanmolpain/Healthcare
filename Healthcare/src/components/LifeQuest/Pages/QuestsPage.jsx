@@ -17,15 +17,13 @@ const QuestsPage = () => {
   const [pendingQuestId, setPendingQuestId] = useState(null);
   const [currentQuestTitle, setCurrentQuestTitle] = useState('');
 
-  const handleCompleteQuest = (questId) => {
+  const handleCompleteQuest = async (questId) => {
     const quest = quests.find(q => q.id === questId);
     if (!quest) return;
 
     setCurrentQuestTitle(quest.title);
-    
     // Check quest type and show appropriate modal
     const title = quest.title.toLowerCase();
-    
     if (title.includes('write') || title.includes('thought') || title.includes('journal')) {
       setPendingQuestId(questId);
       setActiveModal('thoughts');
@@ -40,14 +38,14 @@ const QuestsPage = () => {
       setActiveModal('goals');
     } else {
       // Simple quest - instant completion
-      completeQuest(questId);
+      await completeQuest(questId);
       setShowConfetti(true);
     }
   };
 
-  const handleModalComplete = () => {
+  const handleModalComplete = async () => {
     if (pendingQuestId) {
-      completeQuest(pendingQuestId);
+      await completeQuest(pendingQuestId);
       setShowConfetti(true);
       setPendingQuestId(null);
     }

@@ -1,14 +1,27 @@
+
 from datetime import datetime
 from mongoengine.errors import DoesNotExist
 from app.models.player_stats_model import PlayerStats
+from app.services.redis_service import redis_client
+import json
 
 # --- Helper Functions ---
 def get_or_create_stats(user_id):
+    redis_key = f"player_stats:{user_id}"
+    stats_json = redis_client.get(redis_key)
+    if stats_json:
+        # Load from Redis cache
+        stats_dict = json.loads(stats_json)
+        stats = PlayerStats._from_son(stats_dict)
+        return stats
+    # Fallback to MongoDB
     try:
         stats = PlayerStats.objects.get(user_id=user_id)
     except DoesNotExist:
         stats = PlayerStats(user_id=user_id)
         stats.save()
+    # Cache in Redis
+    redis_client.set(redis_key, stats.to_json())
     return stats
 
 def recalculate_win_rate(stats):
@@ -20,6 +33,10 @@ def recalculate_win_rate(stats):
 
 def update_game_result(user_id, game, is_win, xp_earned):
     stats = get_or_create_stats(user_id)
+    # Debug log for game key
+    print(f"[PlayerStats] update_game_result: user_id={user_id}, game={game}, is_win={is_win}, xp_earned={xp_earned}")
+    # Normalize game key to lowercase
+    game_key = str(game).strip().lower()
     # Global stats
     if is_win:
         stats.global_stats['victories'] = stats.global_stats.get('victories', 0) + 1
@@ -32,12 +49,12 @@ def update_game_result(user_id, game, is_win, xp_earned):
     while stats.global_stats['xp'] >= stats.global_stats['level'] * 100:
         stats.global_stats['xp'] -= stats.global_stats['level'] * 100
         stats.global_stats['level'] += 1
-    # Per-game stats
-    if game not in stats.games:
-        stats.games[game] = {
+    # Per-game stats (robust creation)
+    if game_key not in stats.games or not isinstance(stats.games[game_key], dict):
+        stats.games[game_key] = {
             'level': 1, 'xp': 0, 'victories': 0, 'losses': 0, 'current_streak': 0
         }
-    g = stats.games[game]
+    g = stats.games[game_key]
     if is_win:
         g['victories'] = g.get('victories', 0) + 1
         g['current_streak'] = g.get('current_streak', 0) + 1
@@ -48,13 +65,16 @@ def update_game_result(user_id, game, is_win, xp_earned):
     while g['xp'] >= g['level'] * 100:
         g['xp'] -= g['level'] * 100
         g['level'] += 1
-    stats.games[game] = g
+    stats.games[game_key] = g
     # Recalculate win rate
     recalculate_win_rate(stats)
     # Achievements
     check_and_unlock_achievements(stats)
     stats.updated_at = datetime.utcnow()
     stats.save()
+    # Update Redis cache
+    redis_key = f"player_stats:{user_id}"
+    redis_client.set(redis_key, stats.to_json())
     return stats
 
 def add_achievement(stats, code, title, game=None):
