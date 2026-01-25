@@ -57,11 +57,12 @@ def update_game_result(user_id, game, is_win, xp_earned):
     stats.save()
     return stats
 
-def add_achievement(stats, code, title):
+def add_achievement(stats, code, title, game=None):
     if not any(a['code'] == code for a in stats.achievements):
         stats.achievements.append({
             'code': code,
             'title': title,
+            'game': game,
             'earned_at': datetime.utcnow()
         })
         stats.save()
@@ -76,12 +77,42 @@ def add_badge(stats, code, level):
         stats.save()
 
 def check_and_unlock_achievements(stats):
-    # FIRST_WIN
+    # Global achievements
     if stats.global_stats.get('victories', 0) >= 1:
-        add_achievement(stats, 'FIRST_WIN', 'First Victory!')
-    # STREAK_5
+        add_achievement(stats, 'FIRST_WIN', 'First Victory!', 'global')
     if stats.global_stats.get('current_streak', 0) >= 5:
-        add_achievement(stats, 'STREAK_5', '5-Win Streak!')
-    # LEVEL_5
+        add_achievement(stats, 'STREAK_5', '5-Win Streak!', 'global')
     if stats.global_stats.get('level', 1) >= 5:
-        add_achievement(stats, 'LEVEL_5', 'Level 5 Reached!')
+        add_achievement(stats, 'LEVEL_5', 'Level 5 Reached!', 'global')
+    if stats.global_stats.get('victories', 0) >= 10:
+        add_achievement(stats, 'WIN_MASTER', '10 Victories!', 'global')
+    if stats.global_stats.get('level', 1) >= 10:
+        add_achievement(stats, 'LEVEL_MASTER', 'Level 10 Reached!', 'global')
+
+    # Game-specific achievements
+    for game_name, game_stats in stats.games.items():
+        game_display_name = {
+            'thoughtbattle': 'Thought Battle',
+            'lifequest': 'Life Quest',
+            'emotionquest': 'Emotion Quest'
+        }.get(game_name, game_name.title())
+
+        # First win in specific game
+        if game_stats.get('victories', 0) >= 1:
+            add_achievement(stats, f'{game_name.upper()}_FIRST_WIN', f'First {game_display_name} Victory!', game_name)
+
+        # Game-specific level achievements
+        if game_stats.get('level', 1) >= 3:
+            add_achievement(stats, f'{game_name.upper()}_LEVEL_3', f'{game_display_name} Level 3!', game_name)
+        if game_stats.get('level', 1) >= 5:
+            add_achievement(stats, f'{game_name.upper()}_LEVEL_5', f'{game_display_name} Level 5!', game_name)
+
+        # Game-specific victory achievements
+        if game_stats.get('victories', 0) >= 5:
+            add_achievement(stats, f'{game_name.upper()}_WIN_5', f'5 {game_display_name} Wins!', game_name)
+        if game_stats.get('victories', 0) >= 10:
+            add_achievement(stats, f'{game_name.upper()}_WIN_10', f'10 {game_display_name} Wins!', game_name)
+
+        # Game-specific streak achievements
+        if game_stats.get('current_streak', 0) >= 3:
+            add_achievement(stats, f'{game_name.upper()}_STREAK_3', f'3-Game {game_display_name} Streak!', game_name)

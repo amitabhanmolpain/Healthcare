@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Zap, Target, Award, Volume2, VolumeX, Sparkles, Music } from 'lucide-react';
 import useGameStore from '../../store/gameStore';
+import { statsAPI } from '../../services/statsApi';
 import XPBar from './UI/XPBar';
 import LevelBadge from './UI/LevelBadge';
 import ChoiceButton from './UI/ChoiceButton';
@@ -25,6 +26,7 @@ const BattleArena = ({ onExit }) => {
     showResult,
     lastResult,
     soundEnabled,
+    loading,
     addXP,
     incrementStreak,
     resetStreak,
@@ -141,14 +143,14 @@ const BattleArena = ({ onExit }) => {
     }
   };
 
-  const handleChoice = (option) => {
+  const handleChoice = async (option) => {
     setButtonsDisabled(true);
     setEnemyHit(true);
     playSound('hit');
     
     incrementBattles();
     
-    setTimeout(() => {
+    setTimeout(async () => {
       if (option.isCorrect) {
         setEnemyDefeated(true);
         playSound('victory');
@@ -163,6 +165,17 @@ const BattleArena = ({ onExit }) => {
           correctAnswer: correctOption.text,
           streak: streak + 1
         });
+
+        // Submit victory to backend
+        try {
+          await statsAPI.updateStats({
+            game: 'thoughtbattle',
+            win: true,
+            xp: 20
+          });
+        } catch (error) {
+          console.error('Failed to update stats:', error);
+        }
       } else {
         playSound('wrong');
         addXP(5);
@@ -175,6 +188,17 @@ const BattleArena = ({ onExit }) => {
           correctAnswer: correctOption.text,
           streak: 0
         });
+
+        // Submit loss to backend
+        try {
+          await statsAPI.updateStats({
+            game: 'thoughtbattle',
+            win: false,
+            xp: 5
+          });
+        } catch (error) {
+          console.error('Failed to update stats:', error);
+        }
       }
       
       setEnemyHit(false);
@@ -186,6 +210,17 @@ const BattleArena = ({ onExit }) => {
     setButtonsDisabled(false);
     nextScenario();
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-xl">Loading your progress...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">

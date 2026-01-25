@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { statsAPI } from '../services/statsApi';
 
 const useGameStore = create((set, get) => ({
   // Player Stats
@@ -16,6 +17,7 @@ const useGameStore = create((set, get) => ({
   showResult: false,
   lastResult: null,
   soundEnabled: true,
+  loading: false,
   
   // Scenarios
   scenarios: [
@@ -673,7 +675,37 @@ const useGameStore = create((set, get) => ({
     lastResult: null
   })),
   
-  startGame: () => set({ isPlaying: true }),
+  startGame: async () => {
+    try {
+      set({ loading: true });
+      const stats = await statsAPI.getStats();
+      const gameStats = stats.games?.thoughtbattle || {
+        level: 1,
+        xp: 0,
+        victories: 0,
+        losses: 0,
+        current_streak: 0
+      };
+      
+      set({
+        level: gameStats.level || 1,
+        xp: gameStats.xp || 0,
+        victories: gameStats.victories || 0,
+        totalBattles: (gameStats.victories || 0) + (gameStats.losses || 0),
+        streak: gameStats.current_streak || 0,
+        highestStreak: Math.max(get().highestStreak, gameStats.current_streak || 0),
+        badges: stats.badges || [],
+        isPlaying: true,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Failed to load game stats:', error);
+      set({ 
+        isPlaying: true,
+        loading: false 
+      });
+    }
+  },
   
   exitGame: () => set({ 
     isPlaying: false,
