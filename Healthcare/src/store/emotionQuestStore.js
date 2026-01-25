@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { statsAPI } from '../services/statsApi';
 
 const useEmotionQuestStore = create(
   persist(
@@ -42,12 +43,19 @@ const useEmotionQuestStore = create(
       skillsLearned: [],
       
       // Actions
-      addXP: (amount) => {
+      addXP: async (amount) => {
         const state = get();
         const newTotalXP = state.totalXP + amount;
         const newXP = state.xp + amount;
         const xpNeededForLevel = state.level * 100;
-        
+
+        // Update backend stats for leaderboard
+        try {
+          await statsAPI.updateStats({ game: 'emotionquest', win: true, xp: amount });
+        } catch (e) {
+          // Optionally handle error
+        }
+
         if (newXP >= xpNeededForLevel) {
           // Level up!
           const newLevel = state.level + 1;
@@ -56,12 +64,10 @@ const useEmotionQuestStore = create(
             level: newLevel,
             totalXP: newTotalXP
           });
-          
           // Import sound manager dynamically to avoid circular deps
           import('../components/EmotionQuest/soundManager').then(module => {
             module.default.playLevelUp();
           });
-          
           // Check level badges
           get().checkBadges();
         } else {

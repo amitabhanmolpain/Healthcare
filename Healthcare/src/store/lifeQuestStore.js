@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { statsAPI } from '../services/statsApi';
 
 const INITIAL_QUESTS = [
   { id: 1, title: 'Drink a Glass of Water', description: 'Hydration is key to mental clarity', difficulty: 'easy', points: 10, status: 'available', category: 'health', date: new Date().toISOString().split('T')[0] },
@@ -70,25 +71,22 @@ const useLifeQuestStore = create(
       badges: BADGES,
 
       // Actions
-      completeQuest: (questId) => {
+      completeQuest: async (questId) => {
         const state = get();
         const quest = state.quests.find(q => q.id === questId);
-        
         if (!quest || quest.status === 'completed') return;
 
         const today = new Date().toISOString().split('T')[0];
         const newXP = state.progress.xp + quest.points;
         const newLevel = Math.floor(newXP / 100) + 1;
-        
+
         // Update streak
         let newStreak = state.progress.current_streak;
         const lastQuestDate = state.progress.last_quest_date;
-        
         if (lastQuestDate !== today) {
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
           const yesterdayStr = yesterday.toISOString().split('T')[0];
-          
           if (lastQuestDate === yesterdayStr) {
             newStreak += 1;
           } else if (lastQuestDate && lastQuestDate !== today) {
@@ -97,13 +95,11 @@ const useLifeQuestStore = create(
             newStreak = 1;
           }
         }
-
         const newLongestStreak = Math.max(state.progress.longest_streak, newStreak);
 
         // Damage random bad guy
         const activeBadGuys = state.badguys.filter(bg => !bg.defeated);
         let updatedBadGuys = [...state.badguys];
-        
         if (activeBadGuys.length > 0) {
           const randomBadGuy = activeBadGuys[Math.floor(Math.random() * activeBadGuys.length)];
           const badGuyIndex = updatedBadGuys.findIndex(bg => bg.id === randomBadGuy.id);
@@ -129,6 +125,13 @@ const useLifeQuestStore = create(
           },
           badguys: updatedBadGuys,
         });
+
+        // Update backend stats for leaderboard
+        try {
+          await statsAPI.updateStats({ game: 'lifequest', win: true, xp: quest.points });
+        } catch (e) {
+          // Optionally handle error
+        }
 
         // Check and unlock badges
         get().checkBadges();

@@ -1059,18 +1059,13 @@ const LeaderboardSection = () => {
   const daysInMonth = getDaysInMonth(month.year, month.month);
 
   // hooks ALWAYS run
-  // Build activity map from real data
+  // Build activity map from real data and calculate current streak
+  const [currentStreak, setCurrentStreak] = useState(0);
   const activityMap = useMemo(() => {
-    // Assume stats or games has a 'activity_log' or similar array of dates played (YYYY-MM-DD)
-    // If not, fallback to victories/losses per day if available
-    // For now, use a simple approach: if any game has a victory/loss on a date, mark as played
-    const map = {};
-    // Try to get activity log from stats or games
     let activityLog = [];
     if (stats && stats.activity_log) {
       activityLog = stats.activity_log;
     } else if (games) {
-      // Aggregate all games' activity logs if present
       Object.values(games).forEach(g => {
         if (g && Array.isArray(g.activity_log)) {
           activityLog = activityLog.concat(g.activity_log);
@@ -1083,11 +1078,26 @@ const LeaderboardSection = () => {
       if (date && date.date) return date.date;
       return '';
     }));
+    // Build map for calendar
+    const map = {};
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(month.year, month.month, d);
       const dateStr = dateObj.toISOString().slice(0, 10);
       map[d] = playedSet.has(dateStr);
     }
+    // Calculate current streak (consecutive days up to today)
+    let streak = 0;
+    const today = new Date();
+    for (let i = 0; ; i++) {
+      const checkDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+      const checkStr = checkDate.toISOString().slice(0, 10);
+      if (playedSet.has(checkStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    setCurrentStreak(streak);
     return map;
   }, [daysInMonth, month, stats, games]);
 
@@ -1210,8 +1220,8 @@ const LeaderboardSection = () => {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-gray-400 text-sm">Best Streak</p>
-            <p className="text-yellow-400 font-bold text-2xl">{highestStreak} days 🔥</p>
+            <p className="text-gray-400 text-sm">Current Streak</p>
+            <p className="text-yellow-400 font-bold text-2xl">{currentStreak} days 🔥</p>
           </div>
         </div>
 
