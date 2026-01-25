@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { doctorAPI } from "../../services/api";
+import { doctorAPI, appointmentAPI } from "../../services/api";
+import orderAPI from "../../services/orderApi";
 import toast from "react-hot-toast";
 import { 
   Calendar, 
@@ -7,7 +8,7 @@ import {
   Heart, 
   ClipboardList,
   TrendingUp,
-  Activity,
+  ShoppingBag,
   Lightbulb,
   CheckCircle
 } from "lucide-react";
@@ -15,9 +16,13 @@ import {
 const DashboardHome = ({ user, setActiveSection }) => {
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [upcomingCount, setUpcomingCount] = useState(null);
+  const [activePrescriptions, setActivePrescriptions] = useState(null);
+  const [totalOrders, setTotalOrders] = useState(null);
 
   useEffect(() => {
     fetchDashboardDoctors();
+    fetchStats();
 
     // Listen for doctor status updates from WebSocket
     const handleDoctorStatusUpdate = (event) => {
@@ -32,6 +37,26 @@ const DashboardHome = ({ user, setActiveSection }) => {
       window.removeEventListener('doctor_status_updated', handleDoctorStatusUpdate);
     };
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      // Upcoming Appointments
+      const upcoming = await appointmentAPI.getUpcomingAppointments();
+      setUpcomingCount(upcoming.count || 0);
+
+      // Orders
+      const orders = await orderAPI.getOrders();
+      setTotalOrders(Array.isArray(orders.orders) ? orders.orders.length : 0);
+      // Active Prescriptions: count orders with prescription_uploaded true
+      const activePres = Array.isArray(orders.orders)
+        ? orders.orders.filter(o => o.prescription_uploaded).length
+        : 0;
+      setActivePrescriptions(activePres);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      toast.error('Failed to load dashboard stats');
+    }
+  };
 
   const fetchDashboardDoctors = async () => {
     try {
@@ -106,10 +131,19 @@ const DashboardHome = ({ user, setActiveSection }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action) => {
             const Icon = action.icon;
+            // Debounce for quick actions
+            const [lastClick, setLastClick] = useState(0);
+            const DEBOUNCE_MS = 200;
+            const handleQuickAction = () => {
+              const now = Date.now();
+              if (now - lastClick < DEBOUNCE_MS) return;
+              setLastClick(now);
+              setActiveSection(action.action);
+            };
             return (
               <button
                 key={action.id}
-                onClick={() => setActiveSection(action.action)}
+                onClick={handleQuickAction}
                 className="group p-6 rounded-2xl bg-white/5 backdrop-blur-sm hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-300 text-left hover:scale-105 hover:shadow-2xl"
               >
                 <div
@@ -133,7 +167,7 @@ const DashboardHome = ({ user, setActiveSection }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-200 text-sm font-medium mb-1">Upcoming Appointments</p>
-              <p className="text-white font-bold text-4xl">2</p>
+              <p className="text-white font-bold text-4xl">{upcomingCount !== null ? upcomingCount : '--'}</p>
             </div>
             <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center backdrop-blur-sm">
               <Calendar size={28} className="text-blue-400" />
@@ -144,7 +178,7 @@ const DashboardHome = ({ user, setActiveSection }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-200 text-sm font-medium mb-1">Active Prescriptions</p>
-              <p className="text-white font-bold text-4xl">3</p>
+              <p className="text-white font-bold text-4xl">{activePrescriptions !== null ? activePrescriptions : '--'}</p>
             </div>
             <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center backdrop-blur-sm">
               <Pill size={28} className="text-green-400" />
@@ -154,11 +188,11 @@ const DashboardHome = ({ user, setActiveSection }) => {
         <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/20 rounded-2xl p-6 border border-pink-500/20 backdrop-blur-sm shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-200 text-sm font-medium mb-1">Health Score</p>
-              <p className="text-white font-bold text-4xl">85%</p>
+              <p className="text-gray-200 text-sm font-medium mb-1">Total Orders</p>
+              <p className="text-white font-bold text-4xl">{totalOrders !== null ? totalOrders : '--'}</p>
             </div>
             <div className="w-14 h-14 rounded-xl bg-pink-500/20 flex items-center justify-center backdrop-blur-sm">
-              <Activity size={28} className="text-pink-400" />
+              <ShoppingBag size={28} className="text-pink-400" />
             </div>
           </div>
         </div>

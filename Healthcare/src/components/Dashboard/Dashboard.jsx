@@ -63,9 +63,9 @@ const Dashboard = ({ user, onLogout, onBackToHome }) => {
       case "medications":
         return <MedicationSection />;
       case "mental-health":
-        return <MentalHealthSection showGame={showGame} setShowGame={setShowGame} />;
+        return <MentalHealthSection key="mental-health" showGame={showGame} setShowGame={setShowGame} />;
       case "leaderboard":
-        return <MentalHealthSection showGame={showGame} setShowGame={setShowGame} defaultTab="leaderboard" />;
+        return <MentalHealthSection key="leaderboard" showGame={showGame} setShowGame={setShowGame} defaultTab="leaderboard" />;
       case "profile":
         return <ProfileSection user={user} />;
       default:

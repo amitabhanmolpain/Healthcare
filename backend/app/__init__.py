@@ -11,8 +11,58 @@ jwt = JWTManager()
 socketio = SocketIO()
 
 def create_app():
+    # JWT error handlers for clear 401/422 responses and logging
+    from flask_jwt_extended import exceptions as jwt_exceptions
+    import logging
+    logger = logging.getLogger("jwt")
+
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    @app.errorhandler(jwt_exceptions.NoAuthorizationError)
+    def handle_no_auth_error(e):
+        logger.warning(f"JWT NoAuthorizationError: {e}")
+        return {'msg': 'Missing or invalid Authorization header'}, 401
+
+    @app.errorhandler(jwt_exceptions.InvalidHeaderError)
+    def handle_invalid_header(e):
+        logger.warning(f"JWT InvalidHeaderError: {e}")
+        return {'msg': 'Invalid Authorization header'}, 401
+
+    @app.errorhandler(jwt_exceptions.WrongTokenError)
+    def handle_wrong_token(e):
+        logger.warning(f"JWT WrongTokenError: {e}")
+        return {'msg': 'Wrong token type'}, 401
+
+    @app.errorhandler(jwt_exceptions.RevokedTokenError)
+    def handle_revoked_token(e):
+        logger.warning(f"JWT RevokedTokenError: {e}")
+        return {'msg': 'Token has been revoked'}, 401
+
+    @app.errorhandler(jwt_exceptions.FreshTokenRequired)
+    def handle_fresh_token(e):
+        logger.warning(f"JWT FreshTokenRequired: {e}")
+        return {'msg': 'Fresh token required'}, 401
+
+    @app.errorhandler(jwt_exceptions.UserLookupError)
+    def handle_user_load_error(e):
+        logger.warning(f"JWT UserLoadError: {e}")
+        return {'msg': 'User not found for token'}, 401
+
+    @app.errorhandler(jwt_exceptions.CSRFError)
+    def handle_csrf_error(e):
+        logger.warning(f"JWT CSRFError: {e}")
+        return {'msg': 'CSRF token missing or invalid'}, 401
+
+    @app.errorhandler(422)
+    def handle_unprocessable_entity(e):
+        logger.warning(f"422 Unprocessable Entity: {e}")
+        # If it's a JWT error, return 401
+        if hasattr(e, 'data') and e.data and 'messages' in e.data:
+            messages = e.data['messages']
+            if 'json' in messages and 'token' in messages['json']:
+                return {'msg': 'Invalid or missing token'}, 401
+        return {'msg': 'Unprocessable Entity'}, 422
     
     # Initialize extensions
     bcrypt.init_app(app)
@@ -70,5 +120,15 @@ def create_app():
     app.register_blueprint(address_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(assessment_bp)
+    
+    from app.routes.player_stats_routes import register_player_stats_routes
+    register_player_stats_routes(app)
+    from app.controllers.game_controller import game_bp
+    app.register_blueprint(game_bp)
+    
+    # Debug: Print all registered routes
+    print('REGISTERED ROUTES:')
+    for rule in app.url_map.iter_rules():
+        print(rule)
     
     return app

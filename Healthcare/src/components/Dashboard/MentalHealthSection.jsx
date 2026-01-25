@@ -43,6 +43,15 @@ const MentalHealthSection = ({ showGame, setShowGame, defaultTab = "assessment" 
     if (defaultTab !== "assessment") return defaultTab;
     return hasCompletedAssessment ? "results" : "assessment";
   });
+  // Debounce for tab switching
+  const [lastTabClick, setLastTabClick] = useState(0);
+  const DEBOUNCE_TAB_MS = 200;
+  const handleTabClick = (id) => {
+    const now = Date.now();
+    if (now - lastTabClick < DEBOUNCE_TAB_MS) return;
+    setLastTabClick(now);
+    setActiveTab(id);
+  };
   const [journalEntry, setJournalEntry] = useState("");
   const [selectedTherapist, setSelectedTherapist] = useState(null);
   const [activeGame, setActiveGame] = useState(null); // 'thoughtbattle', 'lifequest', or 'emotionquest'
@@ -514,7 +523,7 @@ const MentalHealthSection = ({ showGame, setShowGame, defaultTab = "assessment" 
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabClick(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition ${
                   activeTab === tab.id
                     ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg"
@@ -1008,42 +1017,88 @@ const MentalHealthSection = ({ showGame, setShowGame, defaultTab = "assessment" 
 };
 
 // Leaderboard Section Component
-const LeaderboardSection = () => {
-  const { level, xp, totalBattles, victories, streak, highestStreak, badges } = useGameStore();
-  
-  // Calculate stats
-  const winRate = totalBattles > 0 ? Math.round((victories / totalBattles) * 100) : 0;
-  const xpToNextLevel = (level * 100) - xp;
-  const xpProgress = xp % 100;
+import { statsAPI } from "../../services/statsApi";
 
-  // Generate calendar data for the last 30 days
+const LeaderboardSection = () => {
+  const [stats, setStats] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await statsAPI.getStats();
+        setStats(data?.global_stats || {});
+      } catch (e) {
+        console.error("Stats API error:", e);
+        setStats({});
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // helpers
+  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const getFirstDayOfWeek = (y, m) => new Date(y, m, 1).getDay();
+  const getToday = () => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth(), date: d.getDate() };
+  };
+
+  const today = getToday();
+  const daysInMonth = getDaysInMonth(month.year, month.month);
+
+  // hooks ALWAYS run
+  const activityMap = useMemo(() => {
+    const map = {};
+    for (let d = 1; d <= daysInMonth; d++) map[d] = d % 2 === 0;
+    return map;
+  }, [daysInMonth]);
+
   const calendarDays = useMemo(() => {
-    const days = [];
-    const today = new Date();
-    
-    // For demo purposes, simulate random streak days
-    // In production, this would come from a backend/database
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      
-      // Simulate activity (in production, check actual play history)
-      const hasActivity = Math.random() > 0.4 || i < streak;
-      
-      days.push({
-        date: date.getDate(),
-        month: date.getMonth(),
-        year: date.getFullYear(),
-        hasActivity,
-        isToday: i === 0,
-        dayName: date.toLocaleDateString('en-US', { weekday: 'short' })
+    const list = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(month.year, month.month, d);
+      list.push({
+        date: d,
+        dayName: dateObj.toLocaleDateString("en-US", { weekday: "short" }),
+        hasActivity: activityMap[d],
+        isToday:
+          today.year === month.year &&
+          today.month === month.month &&
+          today.date === d,
       });
     }
-    
-    return days;
-  }, [streak]);
+    return list;
+  }, [month, daysInMonth, activityMap, today]);
 
-  const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  // SAFE stats
+  const level = typeof stats.level === "number" ? stats.level : 1;
+  const xp = typeof stats.xp === "number" ? stats.xp : 0;
+  const victories = typeof stats.victories === "number" ? stats.victories : 0;
+  const losses = typeof stats.losses === "number" ? stats.losses : 0;
+  const streak =
+    typeof stats.current_streak === "number" ? stats.current_streak : 0;
+  const winRate = typeof stats.win_rate === "number" ? stats.win_rate : 0;
+
+  const highestStreak =
+    typeof stats.highest_streak === "number"
+      ? stats.highest_streak
+      : streak;
+
+  const badges = Array.isArray(stats.badges) ? stats.badges : [];
+
+  const xpProgress = xp % 100;
+  const xpToNextLevel = level * 100 - xp;
+  const totalBattles = victories + losses;
+
+  // ONLY JSX below
+  if (loading)
+    return <div className="text-white">Loading leaderboard...</div>;
 
   return (
     <div className="space-y-6">
@@ -1115,7 +1170,7 @@ const LeaderboardSection = () => {
             <Calendar size={32} className="text-pink-400" />
             <div>
               <h3 className="font-poppins font-semibold text-2xl text-white">Activity Streak</h3>
-              <p className="text-gray-300">{currentMonthName}</p>
+              <p className="text-gray-300">{new Date(month.year, month.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
             </div>
           </div>
           <div className="text-right">
