@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, ListTodo, Zap, Users, TrendingUp, Skull, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { Home, Swords, Users, TrendingUp, Skull, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import HomePage from './Pages/HomePage';
-import QuestsPage from './Pages/QuestsPage';
-import PowerUpsPage from './Pages/PowerUpsPage';
+import BattlePage from './Pages/BattlePage';
 import AlliesPage from './Pages/AlliesPage';
 import ProgressPage from './Pages/ProgressPage';
 import BadGuysPage from './Pages/BadGuysPage';
@@ -26,11 +25,10 @@ const LifeQuestGame = ({ onExit }) => {
 
   const pages = {
     home: { component: HomePage, title: 'Home', icon: Home },
-    quests: { component: QuestsPage, title: 'Quests', icon: ListTodo },
-    powerups: { component: PowerUpsPage, title: 'Power-Ups', icon: Zap },
-    allies: { component: AlliesPage, title: 'Allies', icon: Users },
+    battle: { component: BattlePage, title: 'Battle Arena', icon: Swords },
+    badguys: { component: BadGuysPage, title: 'Enemies', icon: Skull },
     progress: { component: ProgressPage, title: 'Progress', icon: TrendingUp },
-    badguys: { component: BadGuysPage, title: 'Bad Guys', icon: Skull },
+    allies: { component: AlliesPage, title: 'Support Network', icon: Users },
   };
 
   const CurrentPage = pages[activePage].component;
