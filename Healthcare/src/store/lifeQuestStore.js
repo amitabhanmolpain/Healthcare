@@ -23,12 +23,7 @@ const POWER_UPS = [
   { id: 8, name: 'Nature Gaze', description: 'Look at something green for 30 sec', points: 3, icon: '🌿', uses: 0 },
 ];
 
-const INITIAL_BAD_GUYS = [
-  { id: 1, name: 'Anxiety Monster', description: 'Feeds on worry and fear', health: 100, defeated: false, color: 'blue', icon: '👾' },
-  { id: 2, name: 'Procrastination Dragon', description: 'Keeps you from your goals', health: 100, defeated: false, color: 'red', icon: '🐉' },
-  { id: 3, name: 'Negative Thinking Ghost', description: 'Whispers doubts in your ear', health: 100, defeated: false, color: 'purple', icon: '👻' },
-  { id: 4, name: 'Isolation Troll', description: 'Wants you to stay alone', health: 100, defeated: false, color: 'gray', icon: '🧌' },
-];
+const INITIAL_BAD_GUYS = [];
 
 const BADGES = [
   { id: 1, name: 'First Quest', description: 'Complete your first quest', requirement: 'quests', threshold: 1, unlocked: false, icon: '🌟', rarity: 'common' },
@@ -67,10 +62,103 @@ const useLifeQuestStore = create(
       // Bad Guys
       badguys: INITIAL_BAD_GUYS,
 
+      // Current Battle
+      currentBattle: {
+        badGuyId: null,
+        round: 0,
+        playerHealth: 100,
+        battleLog: [],
+      },
+
+      // Battle Stats
+      battleStats: {
+        totalBattles: 0,
+        battlesWon: 0,
+        battlesDamageDealt: 0,
+        battleCombo: 0,
+      },
+
       // Badges
       badges: BADGES,
 
       // Actions
+      startBattle: (badGuyId) => {
+        set({
+          currentBattle: {
+            badGuyId,
+            round: 0,
+            playerHealth: 100,
+            battleLog: [],
+          }
+        });
+      },
+
+      attackBadGuy: (damage, attackName) => {
+        const state = get();
+        if (!state.currentBattle.badGuyId) return;
+
+        const badGuy = state.badguys.find(bg => bg.id === state.currentBattle.badGuyId);
+        if (!badGuy) return;
+
+        const newHealth = Math.max(0, badGuy.health - damage);
+        const isDefeated = newHealth <= 0;
+        const newCombo = state.battleStats.battleCombo + 1;
+
+        // Update badguy health
+        const updatedBadGuys = state.badguys.map(bg => 
+          bg.id === badGuy.id ? { ...bg, health: newHealth, defeated: isDefeated } : bg
+        );
+
+        // Add XP for damage
+        const newXP = state.progress.xp + Math.ceil(damage / 2);
+        const newLevel = Math.floor(newXP / 100) + 1;
+
+        set({
+          badguys: updatedBadGuys,
+          currentBattle: {
+            ...state.currentBattle,
+            round: state.currentBattle.round + 1,
+            battleLog: [...state.currentBattle.battleLog, {
+              type: 'player_attack',
+              damage,
+              attackName,
+              badGuyHealth: newHealth
+            }]
+          },
+          battleStats: {
+            ...state.battleStats,
+            battleCombo: newCombo,
+            battlesDamageDealt: state.battleStats.battlesDamageDealt + damage,
+            totalBattles: isDefeated ? state.battleStats.totalBattles + 1 : state.battleStats.totalBattles,
+            battlesWon: isDefeated ? state.battleStats.battlesWon + 1 : state.battleStats.battlesWon,
+          },
+          progress: {
+            ...state.progress,
+            xp: newXP,
+            level: newLevel,
+          }
+        });
+
+        if (isDefeated) {
+          get().checkBadges();
+        }
+      },
+
+      endBattle: () => {
+        set({
+          currentBattle: {
+            badGuyId: null,
+            round: 0,
+            playerHealth: 100,
+            battleLog: [],
+          },
+          battleStats: {
+            ...get().battleStats,
+            battleCombo: 0,
+          }
+        });
+      },
+
       completeQuest: async (questId) => {
         const state = get();
         const quest = state.quests.find(q => q.id === questId);
@@ -179,8 +267,10 @@ const useLifeQuestStore = create(
           badguys: [...state.badguys, { 
             ...badguy, 
             id: Date.now(), 
-            health: 100, 
-            defeated: false 
+            health: 150,
+            maxHealth: 150,
+            defeated: false,
+            timesDefeated: 0,
           }]
         }));
       },
